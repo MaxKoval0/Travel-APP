@@ -49,7 +49,7 @@ const RESPONSE_SCHEMA = {
           area: {
             type: ['string', 'null'],
             description:
-              'A broad grouping label shared by SEVERAL items in this same list, used for grouping items into sections — e.g. "Пригород" or "Канары" if multiple items belong to that wider region/leg of the trip. This is NOT the specific place name itself (that goes in title) and NOT a one-off label only this item would have — if no broader group is implied by the text, leave null rather than inventing one.',
+              'A broad grouping label shared by SEVERAL items in this same list, used to group items into sections. Set this ONLY when the text itself signals an intentional grouping — e.g. a heading, a prefix like "Пригород:" before several items, or items explicitly described as part of the same leg/day/region of the trip. Do NOT derive area from an incidental mention of a place or region inside a description (e.g. "the largest in Europe" does NOT mean area="Европа") — that is a hallucination, not a grouping. If in doubt, leave null. Null is the expected, normal value for most items; only a minority of trips will have explicit groupings at all.',
           },
           cost_estimate: {
             type: ['string', 'null'],
@@ -111,13 +111,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 For each item, return:
 - title: a short, clear name for the activity or place
-- notes: any extra detail mentioned, or null
+- category, cost_estimate, duration_estimate, confidence, area: extract these FIRST (see rules below), THEN
+- notes: ONLY genuinely extra detail that is NOT already captured by category/cost_estimate/duration_estimate/confidence/area —
+  e.g. why it's worth doing, a tip, a caveat. Do NOT restate the category, price, or duration as a sentence in notes —
+  that information already has its own field and showing it twice is a bug, not a feature. If there is nothing left to
+  say once category/price/duration/confidence are extracted, set notes to null — an empty notes field is the normal,
+  expected result for most items, not something to avoid.
 - date: MUST be either a valid YYYY-MM-DD string or null — nothing else is acceptable in this field.
   The trip starts on ${tripDateStart ?? 'an unknown date'}. Resolve relative dates ("second day", "on the way back") to YYYY-MM-DD ONLY if the start date is known and the resolution is unambiguous.
   If a date is mentioned but cannot be resolved to a valid YYYY-MM-DD (e.g. the start date is unknown), set date to null and put the original phrase ("second day", etc.) into notes instead — never put non-date text in the date field.
 - matched_place_id: ONLY set this to one of the existing place ids below if the item clearly refers to that exact place. Never invent an id. Use null if unsure or not in the list.
 - confidence: "confirmed" / "possible" / "questionable" — only if the text gives a real signal about how settled this is. Null otherwise, do not guess.
-- category, area, cost_estimate, duration_estimate: short free text, only if mentioned or clearly implied. Null otherwise — do not invent prices, durations, or regions that aren't in the text.
+- category, cost_estimate, duration_estimate: short free text, only if mentioned or clearly implied. Null otherwise — do not invent prices or durations that aren't in the text.
+- area: only when the text intentionally groups several items together (a heading, a "Пригород:"-style prefix, explicit "same day/region" framing). An incidental geographic word inside a description (e.g. "the largest in Europe") is NOT a grouping signal. Null is the normal, expected value for most items.
 
 Existing places (id: name):
 ${placesList}
