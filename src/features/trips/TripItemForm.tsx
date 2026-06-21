@@ -2,9 +2,13 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api'
 import { usePlaces } from '../../hooks/usePlaces'
 import { useCreateTripItem, useUpdateTripItem } from '../../hooks/useTripItems'
+import { CONFIDENCE_LABELS } from './itemStyles'
+import type { TripItemConfidence } from '../../lib/database.types'
 import type { TripItemWithPlace } from './types'
 
 type LocationMode = 'place' | 'pin' | 'none'
+
+const CONFIDENCE_OPTIONS: TripItemConfidence[] = ['confirmed', 'possible', 'questionable']
 
 interface TripItemFormProps {
   tripId: string
@@ -26,6 +30,11 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
   const [title, setTitle] = useState(editing?.title ?? '')
   const [notes, setNotes] = useState(editing?.notes ?? '')
   const [date, setDate] = useState(editing?.date ?? '')
+  const [confidence, setConfidence] = useState<TripItemConfidence | null>(editing?.confidence ?? null)
+  const [category, setCategory] = useState(editing?.category ?? '')
+  const [area, setArea] = useState(editing?.area ?? '')
+  const [costEstimate, setCostEstimate] = useState(editing?.cost_estimate ?? '')
+  const [durationEstimate, setDurationEstimate] = useState(editing?.duration_estimate ?? '')
   const [mode, setMode] = useState<LocationMode>(
     editing?.place_id ? 'place' : editing?.lat != null ? 'pin' : 'none',
   )
@@ -55,6 +64,11 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
       place_id: mode === 'place' ? placeId || null : null,
       lat: mode === 'pin' ? pin?.lat ?? null : null,
       lng: mode === 'pin' ? pin?.lng ?? null : null,
+      confidence,
+      category: category.trim() || null,
+      area: area.trim() || null,
+      cost_estimate: costEstimate.trim() || null,
+      duration_estimate: durationEstimate.trim() || null,
     }
 
     if (editing) {
@@ -89,6 +103,51 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
         rows={2}
         className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
       />
+
+      <div className="flex gap-2">
+        {CONFIDENCE_OPTIONS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setConfidence(confidence === c ? null : c)}
+            className={`flex-1 rounded border px-2 py-1.5 text-xs font-medium ${
+              confidence === c ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
+            }`}
+          >
+            {CONFIDENCE_LABELS[c]}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="Категория (История, Природа…)"
+          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+        />
+        <input
+          value={area}
+          onChange={(e) => setArea(e.target.value)}
+          placeholder="Район (Пригород, Канары…)"
+          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={costEstimate}
+          onChange={(e) => setCostEstimate(e.target.value)}
+          placeholder="Цена (например 8-12€)"
+          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+        />
+        <input
+          value={durationEstimate}
+          onChange={(e) => setDurationEstimate(e.target.value)}
+          placeholder="Длительность (например 2-3 часа)"
+          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+        />
+      </div>
 
       <div className="flex gap-2">
         {(['place', 'pin', 'none'] as const).map((m) => (

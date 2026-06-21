@@ -67,6 +67,11 @@ headers:
 | lat, lng | float8 | nullable — only for one-off logistics points not worth saving as a `place` |
 | sort_order | int | defaults to 0; for manual ordering among undated items |
 | is_done | bool | defaults to false |
+| confidence | text | nullable, `confirmed` \| `possible` \| `questionable` — only set with a real signal in the text |
+| category | text | nullable, free text theme tag, e.g. "История", "Природа" |
+| area | text | nullable, free text — a broad label SHARED by several items (e.g. "Пригород"), used to group items into sections. Not a specific place name |
+| cost_estimate | text | nullable, free text, e.g. "8-12€ лодка + ~20€ ужин" |
+| duration_estimate | text | nullable, free text, e.g. "2-3 часа" |
 
 ## Examples
 

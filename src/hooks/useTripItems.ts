@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { TripItem } from '../lib/database.types'
+import type { TripItem, TripItemConfidence } from '../lib/database.types'
 
 export function useTripItems(tripId: string | undefined) {
   return useQuery({
@@ -30,6 +30,11 @@ export function useCreateTripItem() {
       lat?: number | null
       lng?: number | null
       sort_order?: number
+      confidence?: TripItemConfidence | null
+      category?: string | null
+      area?: string | null
+      cost_estimate?: string | null
+      duration_estimate?: string | null
     }) => {
       const { data, error } = await supabase.from('trip_items').insert(item).select().single()
       if (error) throw error

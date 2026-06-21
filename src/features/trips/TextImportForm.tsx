@@ -4,6 +4,7 @@ import { usePlaces } from '../../hooks/usePlaces'
 import { useParseTripItemsImport, type ParsedTripItem } from '../../hooks/useImportTripItems'
 import { useCreateTrip } from '../../hooks/useTrips'
 import { useCreateTripItem } from '../../hooks/useTripItems'
+import { CONFIDENCE_BADGE, CONFIDENCE_ICON, CONFIDENCE_LABELS } from './itemStyles'
 
 interface TextImportFormProps {
   tripId?: string
@@ -71,6 +72,11 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
           notes: item.notes,
           date: item.date,
           place_id: item.matched_place_id,
+          confidence: item.confidence,
+          category: item.category,
+          area: item.area,
+          cost_estimate: item.cost_estimate,
+          duration_estimate: item.duration_estimate,
         })
       }
 
@@ -146,11 +152,26 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
                     className="mt-1 h-4 w-4 shrink-0"
                   />
                   <div className="flex-1">
-                    <input
-                      value={item.title}
-                      onChange={(e) => updateItem(index, { title: e.target.value })}
-                      className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none"
-                    />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <input
+                        value={item.title}
+                        onChange={(e) => updateItem(index, { title: e.target.value })}
+                        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none"
+                      />
+                      {item.confidence && (
+                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${CONFIDENCE_BADGE[item.confidence]}`}>
+                          {CONFIDENCE_ICON[item.confidence]} {CONFIDENCE_LABELS[item.confidence]}
+                        </span>
+                      )}
+                      {item.category && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500">
+                          {item.category}
+                        </span>
+                      )}
+                      {item.area && (
+                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-600">{item.area}</span>
+                      )}
+                    </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <input
                         type="date"
@@ -162,6 +183,10 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
                         <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">
                           📍 {placeName(item.matched_place_id)}
                         </span>
+                      )}
+                      {item.cost_estimate && <span className="text-xs text-slate-400">€ {item.cost_estimate}</span>}
+                      {item.duration_estimate && (
+                        <span className="text-xs text-slate-400">🕐 {item.duration_estimate}</span>
                       )}
                     </div>
                     {item.notes && <p className="mt-1 text-xs text-slate-400">{item.notes}</p>}

@@ -52,9 +52,23 @@ create table if not exists trip_items (
   lng float8,
   sort_order int not null default 0,
   is_done bool not null default false,
+  confidence text check (confidence in ('confirmed', 'possible', 'questionable')),
+  category text,
+  area text,
+  cost_estimate text,
+  duration_estimate text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Re-running this file against a database created before these columns existed:
+alter table trip_items add column if not exists confidence text;
+alter table trip_items drop constraint if exists trip_items_confidence_check;
+alter table trip_items add constraint trip_items_confidence_check check (confidence in ('confirmed', 'possible', 'questionable'));
+alter table trip_items add column if not exists category text;
+alter table trip_items add column if not exists area text;
+alter table trip_items add column if not exists cost_estimate text;
+alter table trip_items add column if not exists duration_estimate text;
 
 create index if not exists trip_items_trip_sort_idx on trip_items (trip_id, sort_order);
 create index if not exists trip_items_place_idx on trip_items (place_id);

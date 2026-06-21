@@ -32,6 +32,7 @@ export default function TripDetailPage() {
   const [openPlaceId, setOpenPlaceId] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItemWithPlace | 'new' | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [groupBy, setGroupBy] = useState<'date' | 'area'>('date')
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -42,6 +43,18 @@ export default function TripDetailPage() {
       .sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : a.sort_order - b.sort_order))
     const undated = all.filter((i) => !i.date).sort((a, b) => a.sort_order - b.sort_order)
     return { dated, undated }
+  }, [items])
+
+  const byArea = useMemo(() => {
+    const all = (items ?? []) as TripItemWithPlace[]
+    const groups = new Map<string, TripItemWithPlace[]>()
+    for (const item of all) {
+      const key = item.area || 'Без района'
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(item)
+    }
+    for (const list of groups.values()) list.sort((a, b) => a.sort_order - b.sort_order)
+    return Array.from(groups.entries())
   }, [items])
 
   if (!trip) {
@@ -162,31 +175,65 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        <ul className="mt-2 flex flex-col gap-1.5">
-          {dated.map((item) => (
-            <TripItemRow key={item.id} item={item} onOpenPlace={setOpenPlaceId} onEdit={setEditingItem} />
-          ))}
-        </ul>
+        {items && items.length > 0 && (
+          <div className="mt-3 flex gap-2">
+            {(['date', 'area'] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGroupBy(g)}
+                className={`rounded border px-2.5 py-1 text-xs font-medium ${
+                  groupBy === g ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
+                }`}
+              >
+                {g === 'date' ? 'По дате' : 'По району'}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {undated.length > 0 && (
+        {groupBy === 'date' ? (
           <>
-            <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">Не распределено</p>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={undated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                <ul className="flex flex-col gap-1.5">
-                  {undated.map((item) => (
-                    <TripItemRow
-                      key={item.id}
-                      item={item}
-                      draggable
-                      onOpenPlace={setOpenPlaceId}
-                      onEdit={setEditingItem}
-                    />
-                  ))}
-                </ul>
-              </SortableContext>
-            </DndContext>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {dated.map((item) => (
+                <TripItemRow key={item.id} item={item} onOpenPlace={setOpenPlaceId} onEdit={setEditingItem} />
+              ))}
+            </ul>
+
+            {undated.length > 0 && (
+              <>
+                <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Не распределено
+                </p>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={undated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                    <ul className="flex flex-col gap-1.5">
+                      {undated.map((item) => (
+                        <TripItemRow
+                          key={item.id}
+                          item={item}
+                          draggable
+                          onOpenPlace={setOpenPlaceId}
+                          onEdit={setEditingItem}
+                        />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              </>
+            )}
           </>
+        ) : (
+          byArea.map(([area, areaItems]) => (
+            <div key={area}>
+              <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">{area}</p>
+              <ul className="flex flex-col gap-1.5">
+                {areaItems.map((item) => (
+                  <TripItemRow key={item.id} item={item} onOpenPlace={setOpenPlaceId} onEdit={setEditingItem} />
+                ))}
+              </ul>
+            </div>
+          ))
         )}
 
         {dated.length === 0 && undated.length === 0 && !editingItem && (

@@ -1,5 +1,6 @@
 export type PlaceStatus = 'want' | 'unsure' | 'disliked'
 export type TripStatus = 'planned' | 'active' | 'done'
+export type TripItemConfidence = 'confirmed' | 'possible' | 'questionable'
 
 // NOTE: these must be `type` aliases, not `interface` declarations.
 // TypeScript 6 no longer treats `interface` as satisfying `extends Record<string, unknown>`,
@@ -48,6 +49,11 @@ export type TripItem = {
   lng: number | null
   sort_order: number
   is_done: boolean
+  confidence: TripItemConfidence | null
+  category: string | null
+  area: string | null
+  cost_estimate: string | null
+  duration_estimate: string | null
   created_at: string
   updated_at: string
 }
@@ -120,6 +126,11 @@ export type Database = {
           lng?: number | null
           sort_order?: number
           is_done?: boolean
+          confidence?: TripItemConfidence | null
+          category?: string | null
+          area?: string | null
+          cost_estimate?: string | null
+          duration_estimate?: string | null
           created_at?: string
           updated_at?: string
         }

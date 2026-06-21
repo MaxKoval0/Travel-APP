@@ -1,10 +1,16 @@
 import { useMutation } from '@tanstack/react-query'
+import type { TripItemConfidence } from '../lib/database.types'
 
 export interface ParsedTripItem {
   title: string
   notes: string | null
   date: string | null
   matched_place_id: string | null
+  confidence: TripItemConfidence | null
+  category: string | null
+  area: string | null
+  cost_estimate: string | null
+  duration_estimate: string | null
 }
 
 export interface ParseTripItemsResult {
