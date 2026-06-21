@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTrips } from '../../hooks/useTrips'
 import TripForm from './TripForm'
+import TextImportForm from './TextImportForm'
 import type { TripStatus } from '../../lib/database.types'
 
 const STATUS_LABELS: Record<TripStatus, string> = {
@@ -26,21 +27,32 @@ function formatDateRange(start: string | null, end: string | null) {
 export default function TripsListPage() {
   const { data: trips } = useTrips()
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
       <div className="mx-auto max-w-2xl p-4">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <h1 className="text-lg font-semibold text-slate-800">Поездки</h1>
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white"
-          >
-            + Новая поездка
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600"
+            >
+              Импорт из текста
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white"
+            >
+              + Новая поездка
+            </button>
+          </div>
         </div>
 
+        {showImport && <div className="mb-4"><TextImportForm onClose={() => setShowImport(false)} /></div>}
         {showForm && <TripForm onClose={() => setShowForm(false)} />}
 
         <ul className="flex flex-col gap-2">

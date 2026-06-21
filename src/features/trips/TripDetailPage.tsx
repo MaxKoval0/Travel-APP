@@ -10,6 +10,7 @@ import PlaceCard from '../places/PlaceCard'
 import TripMiniMap from './TripMiniMap'
 import TripItemRow from './TripItemRow'
 import TripItemForm from './TripItemForm'
+import TextImportForm from './TextImportForm'
 import type { TripItemWithPlace } from './types'
 
 const STATUSES: TripStatus[] = ['planned', 'active', 'done']
@@ -30,6 +31,7 @@ export default function TripDetailPage() {
 
   const [openPlaceId, setOpenPlaceId] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItemWithPlace | 'new' | null>(null)
+  const [showImport, setShowImport] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -124,16 +126,31 @@ export default function TripDetailPage() {
           <TripMiniMap items={dated.concat(undated)} />
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-slate-600">Пункты</h2>
-          <button
-            type="button"
-            onClick={() => setEditingItem('new')}
-            className="rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
-          >
-            + Добавить пункт
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600"
+            >
+              Импорт из текста
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingItem('new')}
+              className="rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white"
+            >
+              + Добавить пункт
+            </button>
+          </div>
         </div>
+
+        {showImport && (
+          <div className="mt-2">
+            <TextImportForm tripId={trip.id} tripDateStart={trip.date_start} onClose={() => setShowImport(false)} />
+          </div>
+        )}
 
         {editingItem && (
           <div className="mt-2">
