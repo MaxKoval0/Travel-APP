@@ -10,7 +10,7 @@ designed to be shared (access is controlled by Row Level Security on the Supabas
 ```
 SUPABASE_URL=https://fkhxnwhqgchxnqecholg.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZraHhud2hxZ2NoeG5xZWNob2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NzgyODAsImV4cCI6MjA5NzU1NDI4MH0.xNrTPW6Ao3ThfVBxzvHwvhEymX19TFX5kUIhRwRcRE8
-APP_URL=https://project-afuuy.vercel.app
+APP_URL=https://koval-travel.vercel.app
 ```
 
 All table requests go through PostgREST:
