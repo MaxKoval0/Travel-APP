@@ -5,6 +5,7 @@ import { useParseTripItemsImport, type ParsedTripItem } from '../../hooks/useImp
 import { useCreateTrip } from '../../hooks/useTrips'
 import { useCreateTripItem } from '../../hooks/useTripItems'
 import { CONFIDENCE_BADGE, CONFIDENCE_ICON, CONFIDENCE_LABELS } from './itemStyles'
+import { ClockIcon, MapPinIcon } from '../../components/icons'
 
 interface TextImportFormProps {
   tripId?: string
@@ -158,18 +159,27 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
                         onChange={(e) => updateItem(index, { title: e.target.value })}
                         className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none"
                       />
-                      {item.confidence && (
-                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${CONFIDENCE_BADGE[item.confidence]}`}>
-                          {CONFIDENCE_ICON[item.confidence]} {CONFIDENCE_LABELS[item.confidence]}
-                        </span>
-                      )}
+                      {item.confidence &&
+                        (() => {
+                          const ConfidenceIcon = CONFIDENCE_ICON[item.confidence]
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${CONFIDENCE_BADGE[item.confidence]}`}
+                            >
+                              <ConfidenceIcon className="h-3 w-3" />
+                              {CONFIDENCE_LABELS[item.confidence]}
+                            </span>
+                          )
+                        })()}
                       {item.category && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
                           {item.category}
                         </span>
                       )}
                       {item.area && (
-                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-600">{item.area}</span>
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                          {item.area}
+                        </span>
                       )}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -180,16 +190,22 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
                         className="rounded border border-slate-200 px-1.5 py-0.5 text-xs"
                       />
                       {item.matched_place_id && (
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">
-                          📍 {placeName(item.matched_place_id)}
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          <MapPinIcon className="h-3 w-3" />
+                          {placeName(item.matched_place_id)}
                         </span>
                       )}
-                      {item.cost_estimate && <span className="text-xs text-slate-400">€ {item.cost_estimate}</span>}
+                      {item.cost_estimate && (
+                        <span className="text-xs font-medium text-slate-600">€ {item.cost_estimate}</span>
+                      )}
                       {item.duration_estimate && (
-                        <span className="text-xs text-slate-400">🕐 {item.duration_estimate}</span>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600">
+                          <ClockIcon className="h-3.5 w-3.5" />
+                          {item.duration_estimate}
+                        </span>
                       )}
                     </div>
-                    {item.notes && <p className="mt-1 text-xs text-slate-400">{item.notes}</p>}
+                    {item.notes && <p className="mt-1 text-xs leading-relaxed text-slate-600">{item.notes}</p>}
                   </div>
                 </div>
               </li>

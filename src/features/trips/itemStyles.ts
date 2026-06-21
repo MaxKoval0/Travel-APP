@@ -1,4 +1,6 @@
+import type { ComponentType } from 'react'
 import type { TripItemConfidence } from '../../lib/database.types'
+import { CheckCircleIcon, DotCircleIcon, QuestionMarkCircleIcon } from '../../components/icons'
 
 export const CONFIDENCE_LABELS: Record<TripItemConfidence, string> = {
   confirmed: 'Точно',
@@ -12,8 +14,8 @@ export const CONFIDENCE_BADGE: Record<TripItemConfidence, string> = {
   questionable: 'bg-amber-100 text-amber-700',
 }
 
-export const CONFIDENCE_ICON: Record<TripItemConfidence, string> = {
-  confirmed: '✅',
-  possible: '◇',
-  questionable: '❓',
+export const CONFIDENCE_ICON: Record<TripItemConfidence, ComponentType<{ className?: string }>> = {
+  confirmed: CheckCircleIcon,
+  possible: DotCircleIcon,
+  questionable: QuestionMarkCircleIcon,
 }
