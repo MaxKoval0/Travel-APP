@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api'
 import { usePlaces } from '../../hooks/usePlaces'
-import { useCreateTripItem, useUpdateTripItem } from '../../hooks/useTripItems'
+import { useCreateTripItem, useUpdateTripItem, useTripItems } from '../../hooks/useTripItems'
 import { CONFIDENCE_LABELS } from './itemStyles'
 import type { TripItemConfidence } from '../../lib/database.types'
 import type { TripItemWithPlace } from './types'
@@ -9,6 +9,7 @@ import type { TripItemWithPlace } from './types'
 type LocationMode = 'place' | 'pin' | 'none'
 
 const CONFIDENCE_OPTIONS: TripItemConfidence[] = ['confirmed', 'possible', 'questionable']
+const NEW_AREA = '__new__'
 
 interface TripItemFormProps {
   tripId: string
@@ -24,8 +25,17 @@ const MODE_LABELS: Record<LocationMode, string> = {
 
 export default function TripItemForm({ tripId, editing, onClose }: TripItemFormProps) {
   const { data: places } = usePlaces()
+  const { data: tripItems } = useTripItems(tripId)
   const createItem = useCreateTripItem()
   const updateItem = useUpdateTripItem()
+
+  const existingAreas = useMemo(() => {
+    const set = new Set<string>()
+    for (const item of tripItems ?? []) {
+      if (item.area) set.add(item.area)
+    }
+    return Array.from(set).sort()
+  }, [tripItems])
 
   const [title, setTitle] = useState(editing?.title ?? '')
   const [notes, setNotes] = useState(editing?.notes ?? '')
@@ -33,6 +43,7 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
   const [confidence, setConfidence] = useState<TripItemConfidence | null>(editing?.confidence ?? null)
   const [category, setCategory] = useState(editing?.category ?? '')
   const [area, setArea] = useState(editing?.area ?? '')
+  const [isNewArea, setIsNewArea] = useState(false)
   const [costEstimate, setCostEstimate] = useState(editing?.cost_estimate ?? '')
   const [durationEstimate, setDurationEstimate] = useState(editing?.duration_estimate ?? '')
   const [mode, setMode] = useState<LocationMode>(
@@ -126,12 +137,38 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
           placeholder="Категория (История, Природа…)"
           className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
         />
-        <input
-          value={area}
-          onChange={(e) => setArea(e.target.value)}
-          placeholder="Район (Пригород, Канары…)"
-          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-        />
+        <div className="flex flex-1 flex-col gap-1">
+          <select
+            value={isNewArea ? NEW_AREA : area}
+            onChange={(e) => {
+              if (e.target.value === NEW_AREA) {
+                setIsNewArea(true)
+                setArea('')
+              } else {
+                setIsNewArea(false)
+                setArea(e.target.value)
+              }
+            }}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="">Без группы</option>
+            {existingAreas.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+            <option value={NEW_AREA}>+ Новая группа…</option>
+          </select>
+          {isNewArea && (
+            <input
+              autoFocus
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              placeholder="Название группы"
+              className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            />
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2">
