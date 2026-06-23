@@ -1,27 +1,29 @@
-import { useCallback } from 'react'
-import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api'
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react'
+import { Autocomplete, GoogleMap, useJsApiLoader } from '@react-google-maps/api'
 import type { Place } from '../../lib/database.types'
-import { STATUS_COLORS } from './statusStyles'
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from '../../lib/googleMaps'
+import MapPin from './MapPin'
 
 const DEFAULT_CENTER = { lat: 20, lng: 10 }
-// Teardrop pin path, tip at (0,0), anchored at the tip.
-const PIN_PATH = 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1 1 10,-30 C 10,-22 2,-20 0,0 z'
-// Visited places go grey on the map regardless of status — mirrors the "done" treatment on the trip mini-map.
-const VISITED_COLOR = '#94a3b8'
+const COORD_PATTERN = /^\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/
 
 interface MapViewProps {
   places: Place[]
   selectedPlaceId: string | null
   onSelectPlace: (id: string) => void
-  onMapClick: (lat: number, lng: number) => void
+  onMapClick: (lat: number, lng: number, name?: string) => void
 }
 
 export default function MapView({ places, selectedPlaceId, onSelectPlace, onMapClick }: MapViewProps) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || '',
-    id: 'travel-tracker-google-maps',
+    id: GOOGLE_MAPS_LOADER_ID,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   })
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const [searchValue, setSearchValue] = useState('')
 
   const handleClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
@@ -29,6 +31,29 @@ export default function MapView({ places, selectedPlaceId, onSelectPlace, onMapC
     },
     [onMapClick],
   )
+
+  const goToLocation = (lat: number, lng: number, name?: string) => {
+    mapRef.current?.panTo({ lat, lng })
+    mapRef.current?.setZoom(14)
+    onMapClick(lat, lng, name)
+    setSearchValue('')
+  }
+
+  const handlePlaceChanged = () => {
+    const place = autocompleteRef.current?.getPlace()
+    const loc = place?.geometry?.location
+    if (loc) goToLocation(loc.lat(), loc.lng(), place?.name)
+  }
+
+  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    const match = searchValue.match(COORD_PATTERN)
+    if (!match) return
+    e.preventDefault()
+    const lat = Number(match[1])
+    const lng = Number(match[2])
+    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) goToLocation(lat, lng)
+  }
 
   if (!apiKey) {
     return (
@@ -47,29 +72,42 @@ export default function MapView({ places, selectedPlaceId, onSelectPlace, onMapC
   }
 
   return (
-    <GoogleMap
-      mapContainerClassName="h-full w-full"
-      center={DEFAULT_CENTER}
-      zoom={2}
-      onClick={handleClick}
-      options={{ streetViewControl: false, mapTypeControl: false }}
-    >
-      {places.map((place) => (
-        <MarkerF
-          key={place.id}
-          position={{ lat: place.lat, lng: place.lng }}
-          onClick={() => onSelectPlace(place.id)}
-          icon={{
-            path: PIN_PATH,
-            fillColor: place.visited ? VISITED_COLOR : STATUS_COLORS[place.status],
-            fillOpacity: 1,
-            strokeColor: '#1f2937',
-            strokeWeight: 1,
-            scale: selectedPlaceId === place.id ? 1.5 : 1.1,
-            anchor: new google.maps.Point(0, 0),
-          }}
-        />
-      ))}
-    </GoogleMap>
+    <div className="relative h-full w-full">
+      <div className="absolute left-3 right-3 top-3 z-10 sm:right-auto sm:w-80">
+        <Autocomplete onLoad={(a) => (autocompleteRef.current = a)} onPlaceChanged={handlePlaceChanged}>
+          <input
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Поиск места или координаты «41.40, 2.17»"
+            className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm shadow outline-none focus:border-emerald-500"
+          />
+        </Autocomplete>
+      </div>
+
+      <GoogleMap
+        mapContainerClassName="h-full w-full"
+        center={DEFAULT_CENTER}
+        zoom={2}
+        onClick={handleClick}
+        onLoad={(map) => {
+          mapRef.current = map
+        }}
+        options={{ streetViewControl: false, mapTypeControl: false }}
+      >
+        {places.map((place) => (
+          <MapPin
+            key={place.id}
+            lat={place.lat}
+            lng={place.lng}
+            touristStatus={place.tourist_status}
+            fpvStatus={place.fpv_status}
+            visited={place.visited}
+            selected={selectedPlaceId === place.id}
+            onClick={() => onSelectPlace(place.id)}
+          />
+        ))}
+      </GoogleMap>
+    </div>
   )
 }

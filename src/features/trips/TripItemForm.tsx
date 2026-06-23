@@ -4,6 +4,7 @@ import { usePlaces } from '../../hooks/usePlaces'
 import { useCreateTripItem, useUpdateTripItem, useTripItems } from '../../hooks/useTripItems'
 import { CONFIDENCE_LABELS } from './itemStyles'
 import type { TripItemConfidence } from '../../lib/database.types'
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from '../../lib/googleMaps'
 import type { TripItemWithPlace } from './types'
 
 type LocationMode = 'place' | 'pin' | 'none'
@@ -100,12 +101,24 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
         className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
       />
 
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="rounded border border-slate-300 px-3 py-2 text-sm"
-      />
+      <div className="flex items-center gap-1">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+        />
+        {date && (
+          <button
+            type="button"
+            onClick={() => setDate('')}
+            className="shrink-0 px-2 py-2 text-slate-400 hover:text-red-500"
+            aria-label="Очистить дату"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       <textarea
         value={notes ?? ''}
@@ -269,7 +282,11 @@ function PinPicker({
   onChange: (p: { lat: number; lng: number }) => void
 }) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-  const { isLoaded } = useJsApiLoader({ googleMapsApiKey: apiKey || '', id: 'travel-tracker-google-maps' })
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: apiKey || '',
+    id: GOOGLE_MAPS_LOADER_ID,
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  })
 
   if (!apiKey || !isLoaded) {
     return (

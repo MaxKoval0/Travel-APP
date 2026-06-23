@@ -32,8 +32,9 @@ headers:
 | id | uuid | auto-generated, omit on insert |
 | name | text | required |
 | lat, lng | float8 | required |
-| status | text | `want` \| `unsure` \| `disliked`, defaults to `want` |
-| visited | bool | defaults to `false` — whether you've actually been there (independent of `status`) |
+| tourist_status | text | nullable, `top` \| `normal` — null means no rating set |
+| fpv_status | text | nullable, `allowed` \| `unclear` \| `banned` — FPV drone flight status, independent of `tourist_status` |
+| visited | bool | defaults to `false` — whether you've actually been there (independent of the two statuses above) |
 | description | text | nullable |
 | notes | text | nullable |
 | created_at, updated_at | timestamptz | auto |
@@ -82,7 +83,7 @@ curl -X POST "$SUPABASE_URL/rest/v1/places" \
   -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
   -H "Prefer: return=representation" \
-  -d '{"name":"Eiffel Tower","lat":48.8584,"lng":2.2945,"status":"want","notes":"book tickets ahead"}'
+  -d '{"name":"Eiffel Tower","lat":48.8584,"lng":2.2945,"tourist_status":"top","notes":"book tickets ahead"}'
 ```
 
 ### Find a place by name
@@ -96,7 +97,7 @@ curl "$SUPABASE_URL/rest/v1/places?name=ilike.*eiffel*" \
 curl -X PATCH "$SUPABASE_URL/rest/v1/places?id=eq.<PLACE_ID>" \
   -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" -H "Prefer: return=representation" \
-  -d '{"status":"disliked"}'
+  -d '{"fpv_status":"banned"}'
 ```
 
 ### Create a trip

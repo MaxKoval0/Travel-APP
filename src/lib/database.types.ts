@@ -1,4 +1,5 @@
-export type PlaceStatus = 'want' | 'unsure' | 'disliked'
+export type TouristStatus = 'top' | 'normal'
+export type FpvStatus = 'allowed' | 'unclear' | 'banned'
 export type TripStatus = 'planned' | 'active' | 'done'
 export type TripItemConfidence = 'confirmed' | 'possible' | 'questionable'
 
@@ -11,7 +12,8 @@ export type Place = {
   name: string
   lat: number
   lng: number
-  status: PlaceStatus
+  tourist_status: TouristStatus | null
+  fpv_status: FpvStatus | null
   visited: boolean
   description: string | null
   notes: string | null
@@ -68,7 +70,8 @@ export type Database = {
           name: string
           lat: number
           lng: number
-          status?: PlaceStatus
+          tourist_status?: TouristStatus | null
+          fpv_status?: FpvStatus | null
           visited?: boolean
           description?: string | null
           notes?: string | null

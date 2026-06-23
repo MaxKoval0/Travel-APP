@@ -102,7 +102,11 @@ export default function TripItemRow({ item, draggable, onOpenPlace, onEdit }: Tr
         )}
         <button
           type="button"
-          onClick={() => deleteItem.mutate({ id: item.id, trip_id: item.trip_id })}
+          onClick={() => {
+            if (confirm(`Удалить пункт «${item.title}»?`)) {
+              deleteItem.mutate({ id: item.id, trip_id: item.trip_id })
+            }
+          }}
           className="shrink-0 cursor-pointer p-2 text-slate-400 hover:text-red-500"
           aria-label="Удалить пункт"
         >

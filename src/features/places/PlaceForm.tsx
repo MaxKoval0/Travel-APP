@@ -1,20 +1,23 @@
 import { useState, type FormEvent } from 'react'
-import type { PlaceStatus } from '../../lib/database.types'
+import type { FpvStatus, TouristStatus } from '../../lib/database.types'
 import { useCreatePlace } from '../../hooks/usePlaces'
-import { STATUS_LABELS } from './statusStyles'
+import { FPV_STATUS_LABELS, TOURIST_STATUS_LABELS } from './statusStyles'
 
 interface PlaceFormProps {
   lat: number
   lng: number
+  initialName?: string
   onSaved: (id: string) => void
   onCancel: () => void
 }
 
-const STATUSES: PlaceStatus[] = ['want', 'unsure', 'disliked']
+const TOURIST_STATUSES: TouristStatus[] = ['top', 'normal']
+const FPV_STATUSES: FpvStatus[] = ['allowed', 'unclear', 'banned']
 
-export default function PlaceForm({ lat, lng, onSaved, onCancel }: PlaceFormProps) {
-  const [name, setName] = useState('')
-  const [status, setStatus] = useState<PlaceStatus>('want')
+export default function PlaceForm({ lat, lng, initialName, onSaved, onCancel }: PlaceFormProps) {
+  const [name, setName] = useState(initialName ?? '')
+  const [touristStatus, setTouristStatus] = useState<TouristStatus | null>(null)
+  const [fpvStatus, setFpvStatus] = useState<FpvStatus | null>(null)
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
   const createPlace = useCreatePlace()
@@ -26,7 +29,8 @@ export default function PlaceForm({ lat, lng, onSaved, onCancel }: PlaceFormProp
       name: name.trim(),
       lat,
       lng,
-      status,
+      tourist_status: touristStatus,
+      fpv_status: fpvStatus,
       description: description.trim() || null,
       notes: notes.trim() || null,
     })
@@ -51,19 +55,40 @@ export default function PlaceForm({ lat, lng, onSaved, onCancel }: PlaceFormProp
         />
       </label>
 
-      <div className="flex gap-2">
-        {STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatus(s)}
-            className={`flex-1 rounded border px-2 py-1.5 text-xs font-medium ${
-              status === s ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
-            }`}
-          >
-            {STATUS_LABELS[s]}
-          </button>
-        ))}
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-slate-400">Туристический статус (необязательно)</span>
+        <div className="flex gap-2">
+          {TOURIST_STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setTouristStatus(touristStatus === s ? null : s)}
+              className={`flex-1 rounded border px-2 py-1.5 text-xs font-medium ${
+                touristStatus === s ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
+              }`}
+            >
+              {TOURIST_STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-slate-400">Статус для FPV-полёта (необязательно)</span>
+        <div className="flex gap-2">
+          {FPV_STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setFpvStatus(fpvStatus === s ? null : s)}
+              className={`flex-1 rounded border px-2 py-1.5 text-xs font-medium ${
+                fpvStatus === s ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
+              }`}
+            >
+              {FPV_STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <label className="flex flex-col gap-1 text-sm text-slate-600">

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import type { PlaceStatus } from '../../lib/database.types'
+import type { FpvStatus, TouristStatus } from '../../lib/database.types'
 import { usePlace, usePlaceTrips, useUpdatePlace, useDeletePlace } from '../../hooks/usePlaces'
-import { STATUS_COLORS, STATUS_LABELS } from './statusStyles'
+import { FPV_STATUS_COLORS, FPV_STATUS_LABELS, TOURIST_STATUS_COLORS, TOURIST_STATUS_LABELS } from './statusStyles'
 import PhotoGallery from './PhotoGallery'
 
 interface PlaceCardProps {
@@ -9,7 +9,8 @@ interface PlaceCardProps {
   onClose: () => void
 }
 
-const STATUSES: PlaceStatus[] = ['want', 'unsure', 'disliked']
+const TOURIST_STATUSES: TouristStatus[] = ['top', 'normal']
+const FPV_STATUSES: FpvStatus[] = ['allowed', 'unclear', 'banned']
 
 interface LinkedTripItem {
   trip_id: string
@@ -54,22 +55,46 @@ export default function PlaceCard({ placeId, onClose }: PlaceCardProps) {
         </button>
       </div>
 
-      <div className="flex gap-2 p-3">
-        {STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => updatePlace.mutate({ id: place.id, status: s })}
-            className="flex-1 rounded border px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors"
-            style={
-              place.status === s
-                ? { backgroundColor: STATUS_COLORS[s], borderColor: STATUS_COLORS[s], color: '#fff' }
-                : { borderColor: '#cbd5e1' }
-            }
-          >
-            {STATUS_LABELS[s]}
-          </button>
-        ))}
+      <div className="flex flex-col gap-1 px-3 pb-2">
+        <span className="text-xs font-medium text-slate-400">Туристический статус</span>
+        <div className="flex gap-2">
+          {TOURIST_STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => updatePlace.mutate({ id: place.id, tourist_status: place.tourist_status === s ? null : s })}
+              className="flex-1 rounded border px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors"
+              style={
+                place.tourist_status === s
+                  ? { backgroundColor: TOURIST_STATUS_COLORS[s], borderColor: TOURIST_STATUS_COLORS[s], color: '#fff' }
+                  : { borderColor: '#cbd5e1' }
+              }
+            >
+              {TOURIST_STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 px-3 pb-3">
+        <span className="text-xs font-medium text-slate-400">Статус для FPV-полёта</span>
+        <div className="flex gap-2">
+          {FPV_STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => updatePlace.mutate({ id: place.id, fpv_status: place.fpv_status === s ? null : s })}
+              className="flex-1 rounded border px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors"
+              style={
+                place.fpv_status === s
+                  ? { backgroundColor: FPV_STATUS_COLORS[s], borderColor: FPV_STATUS_COLORS[s], color: '#fff' }
+                  : { borderColor: '#cbd5e1' }
+              }
+            >
+              {FPV_STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <label className="flex items-center gap-2 px-3 pb-3 text-sm text-slate-600">

@@ -11,7 +11,8 @@ create table if not exists places (
   name text not null,
   lat float8 not null,
   lng float8 not null,
-  status text not null default 'want' check (status in ('want', 'unsure', 'disliked')),
+  tourist_status text check (tourist_status in ('top', 'normal')),
+  fpv_status text check (fpv_status in ('allowed', 'unclear', 'banned')),
   visited bool not null default false,
   description text,
   notes text,
@@ -21,6 +22,25 @@ create table if not exists places (
 
 -- Re-running this file against a database created before `visited` existed:
 alter table places add column if not exists visited bool not null default false;
+
+-- Migrate the old 3-value `status` (want/unsure/disliked) into the new, independent, optional
+-- fields `tourist_status` (top/normal) and `fpv_status` (allowed/unclear/banned). Both are
+-- nullable — null means "no opinion set", i.e. a plain pin on the map.
+alter table places add column if not exists tourist_status text;
+alter table places add column if not exists fpv_status text;
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_name = 'places' and column_name = 'status') then
+    update places set tourist_status = case when status = 'want' then 'top' else 'normal' end
+    where tourist_status is null;
+    alter table places drop column status;
+  end if;
+end $$;
+alter table places drop constraint if exists places_status_check;
+alter table places drop constraint if exists places_tourist_status_check;
+alter table places add constraint places_tourist_status_check check (tourist_status in ('top', 'normal'));
+alter table places drop constraint if exists places_fpv_status_check;
+alter table places add constraint places_fpv_status_check check (fpv_status in ('allowed', 'unclear', 'banned'));
 
 create table if not exists place_photos (
   id uuid primary key default gen_random_uuid(),

@@ -9,7 +9,7 @@ export default function PlacesPage() {
   const { data: places } = usePlaces()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedPlaceId = searchParams.get('place')
-  const [pendingNewPlace, setPendingNewPlace] = useState<{ lat: number; lng: number } | null>(null)
+  const [pendingNewPlace, setPendingNewPlace] = useState<{ lat: number; lng: number; name?: string } | null>(null)
 
   const selectPlace = (id: string | null) => {
     setPendingNewPlace(null)
@@ -28,7 +28,7 @@ export default function PlacesPage() {
           places={places ?? []}
           selectedPlaceId={selectedPlaceId}
           onSelectPlace={(id) => selectPlace(id)}
-          onMapClick={(lat, lng) => {
+          onMapClick={(lat, lng, name) => {
             setSearchParams(
               (prev) => {
                 const next = new URLSearchParams(prev)
@@ -37,7 +37,7 @@ export default function PlacesPage() {
               },
               { replace: true },
             )
-            setPendingNewPlace({ lat, lng })
+            setPendingNewPlace({ lat, lng, name })
           }}
         />
       </div>
@@ -48,6 +48,7 @@ export default function PlacesPage() {
             <PlaceForm
               lat={pendingNewPlace.lat}
               lng={pendingNewPlace.lng}
+              initialName={pendingNewPlace.name}
               onCancel={() => setPendingNewPlace(null)}
               onSaved={(id) => {
                 setPendingNewPlace(null)

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { Place } from '../lib/database.types'
+import type { FpvStatus, Place, TouristStatus } from '../lib/database.types'
 
 const placesKey = ['places'] as const
 
@@ -52,7 +52,8 @@ export function useCreatePlace() {
       name: string
       lat: number
       lng: number
-      status: Place['status']
+      tourist_status?: TouristStatus | null
+      fpv_status?: FpvStatus | null
       description?: string | null
       notes?: string | null
     }) => {

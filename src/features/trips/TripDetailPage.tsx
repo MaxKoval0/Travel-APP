@@ -136,7 +136,7 @@ export default function TripDetailPage() {
         />
 
         <div className="mt-3 overflow-hidden rounded">
-          <TripMiniMap items={dated.concat(undated)} />
+          <TripMiniMap tripId={trip.id} items={dated.concat(undated)} onOpenPlace={setOpenPlaceId} />
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-2">

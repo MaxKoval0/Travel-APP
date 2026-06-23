@@ -8,7 +8,7 @@ export function useTripItems(tripId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('trip_items')
-        .select('*, places(id, name, lat, lng, status)')
+        .select('*, places(id, name, lat, lng, tourist_status, fpv_status, visited)')
         .eq('trip_id', tripId!)
         .order('sort_order', { ascending: true })
       if (error) throw error
