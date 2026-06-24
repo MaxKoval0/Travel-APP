@@ -105,8 +105,16 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
     const place = autocompleteRef.current?.getPlace()
     const loc = place?.geometry?.location
     if (!loc) return
-    const photoUrls = (place?.photos ?? []).slice(0, 6).map((p) => p.getUrl({ maxWidth: 800 }))
-    goToLocation(loc.lat(), loc.lng(), place?.name, photoUrls)
+    mapRef.current?.panTo(loc)
+    mapRef.current?.setZoom(14)
+    setSearchValue('')
+    // Re-fetch through the same lookup the POI-click path uses, rather than trusting
+    // the Autocomplete widget's own getPlace() to have populated photos reliably.
+    if (place?.place_id) {
+      lookupPlaceDetails(place.place_id, loc.lat(), loc.lng())
+    } else {
+      onMapClick(loc.lat(), loc.lng(), place?.name)
+    }
   }
 
   const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -140,7 +148,7 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
       <div className="absolute left-3 right-3 top-3 z-10 sm:right-auto sm:w-80">
         <Autocomplete
           onLoad={(a) => {
-            a.setFields(['name', 'geometry', 'photos'])
+            a.setFields(['place_id', 'name', 'geometry'])
             autocompleteRef.current = a
           }}
           onPlaceChanged={handlePlaceChanged}
