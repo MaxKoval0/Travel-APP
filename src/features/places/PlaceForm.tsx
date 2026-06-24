@@ -23,7 +23,7 @@ export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSa
   const [fpvStatus, setFpvStatus] = useState<FpvStatus | null>(null)
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
-  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(() => new Set(googlePhotoUrls))
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const createPlace = useCreatePlace()
   const addPhotoFromUrl = useAddPlacePhotoFromUrl()
