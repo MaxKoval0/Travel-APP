@@ -94,17 +94,19 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
     [reverseGeocodeName, lookupPlaceDetails],
   )
 
-  const goToLocation = (lat: number, lng: number, name?: string) => {
+  const goToLocation = (lat: number, lng: number, name?: string, photoUrls?: string[]) => {
     mapRef.current?.panTo({ lat, lng })
     mapRef.current?.setZoom(14)
-    onMapClick(lat, lng, name)
+    onMapClick(lat, lng, name, photoUrls)
     setSearchValue('')
   }
 
   const handlePlaceChanged = () => {
     const place = autocompleteRef.current?.getPlace()
     const loc = place?.geometry?.location
-    if (loc) goToLocation(loc.lat(), loc.lng(), place?.name)
+    if (!loc) return
+    const photoUrls = (place?.photos ?? []).slice(0, 6).map((p) => p.getUrl({ maxWidth: 800 }))
+    goToLocation(loc.lat(), loc.lng(), place?.name, photoUrls)
   }
 
   const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -136,7 +138,13 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
   return (
     <div className="relative h-full w-full">
       <div className="absolute left-3 right-3 top-3 z-10 sm:right-auto sm:w-80">
-        <Autocomplete onLoad={(a) => (autocompleteRef.current = a)} onPlaceChanged={handlePlaceChanged}>
+        <Autocomplete
+          onLoad={(a) => {
+            a.setFields(['name', 'geometry', 'photos'])
+            autocompleteRef.current = a
+          }}
+          onPlaceChanged={handlePlaceChanged}
+        >
           <input
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
