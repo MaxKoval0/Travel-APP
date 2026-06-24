@@ -3,6 +3,7 @@ import type { FpvStatus, TouristStatus } from '../../lib/database.types'
 import { useCreatePlace } from '../../hooks/usePlaces'
 import { useAddPlacePhotoFromUrl } from '../../hooks/usePlacePhotos'
 import { FPV_STATUS_LABELS, TOURIST_STATUS_LABELS } from './statusStyles'
+import PhotoLightbox from '../../components/PhotoLightbox'
 
 interface PlaceFormProps {
   lat: number
@@ -23,6 +24,7 @@ export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSa
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const createPlace = useCreatePlace()
   const addPhotoFromUrl = useAddPlacePhotoFromUrl()
 
@@ -77,28 +79,63 @@ export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSa
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-slate-400">Фото из Google — выбери, какие сохранить</span>
           <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {googlePhotoUrls.map((url) => {
+            {googlePhotoUrls.map((url, i) => {
               const isSelected = selectedPhotos.has(url)
               return (
-                <button
+                <div
                   key={url}
-                  type="button"
-                  onClick={() => togglePhoto(url)}
-                  className={`relative h-16 w-16 shrink-0 overflow-hidden rounded border-2 ${
+                  className={`relative h-24 w-24 shrink-0 overflow-hidden rounded border-2 ${
                     isSelected ? 'border-emerald-500' : 'border-transparent'
                   }`}
                 >
-                  <img src={url} alt="" className="h-full w-full object-cover" />
-                  {isSelected && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-emerald-600/40 text-lg text-white">
-                      ✓
-                    </span>
-                  )}
-                </button>
+                  <button type="button" onClick={() => togglePhoto(url)} className="block h-full w-full">
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    {isSelected && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-emerald-600/40 text-lg text-white">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPreviewIndex(i)
+                    }}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white"
+                    aria-label="Открыть фото"
+                  >
+                    ⤢
+                  </button>
+                </div>
               )
             })}
           </div>
         </div>
+      )}
+
+      {previewIndex !== null && googlePhotoUrls && (
+        <PhotoLightbox
+          photos={googlePhotoUrls}
+          index={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onIndexChange={setPreviewIndex}
+          renderActions={(i) => {
+            const url = googlePhotoUrls[i]
+            const isSelected = selectedPhotos.has(url)
+            return (
+              <button
+                type="button"
+                onClick={() => togglePhoto(url)}
+                className={`rounded px-3 py-1.5 text-xs ${
+                  isSelected ? 'bg-emerald-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                {isSelected ? '✓ Выбрано для сохранения' : 'Выбрать для сохранения'}
+              </button>
+            )
+          }}
+        />
       )}
 
       <div className="flex flex-col gap-1">

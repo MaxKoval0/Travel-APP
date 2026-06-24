@@ -7,6 +7,7 @@ import {
   useSetPrimaryPhoto,
 } from '../../hooks/usePlacePhotos'
 import { placePhotoUrl } from '../../lib/supabase'
+import PhotoLightbox from '../../components/PhotoLightbox'
 
 export default function PhotoGallery({ placeId }: { placeId: string }) {
   const { data: photos } = usePlacePhotos(placeId)
@@ -17,6 +18,7 @@ export default function PhotoGallery({ placeId }: { placeId: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [urlValue, setUrlValue] = useState('')
   const [urlError, setUrlError] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -40,7 +42,7 @@ export default function PhotoGallery({ placeId }: { placeId: string }) {
     <div className="mt-1 flex flex-col gap-2">
       {photos && photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5">
-          {photos.map((photo) => (
+          {photos.map((photo, i) => (
             <div
               key={photo.id}
               className="group relative aspect-square overflow-hidden rounded border border-slate-200"
@@ -49,7 +51,7 @@ export default function PhotoGallery({ placeId }: { placeId: string }) {
                 src={placePhotoUrl(photo.storage_path)}
                 alt=""
                 className="h-full w-full cursor-pointer object-cover"
-                onClick={() => setPrimary.mutate({ placeId, photoId: photo.id })}
+                onClick={() => setLightboxIndex(i)}
               />
               {photo.is_primary && (
                 <span className="absolute left-1 top-1 rounded bg-emerald-600 px-1 text-[10px] text-white">
@@ -97,6 +99,41 @@ export default function PhotoGallery({ placeId }: { placeId: string }) {
         </button>
       </form>
       {urlError && <p className="text-xs text-red-500">{urlError}</p>}
+
+      {lightboxIndex !== null && photos && photos.length > 0 && (
+        <PhotoLightbox
+          photos={photos.map((p) => placePhotoUrl(p.storage_path))}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onIndexChange={setLightboxIndex}
+          renderActions={(i) => {
+            const photo = photos[i]
+            return (
+              <>
+                {!photo.is_primary && (
+                  <button
+                    type="button"
+                    onClick={() => setPrimary.mutate({ placeId, photoId: photo.id })}
+                    className="rounded bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20"
+                  >
+                    Сделать главным
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    deletePhoto.mutate(photo)
+                    setLightboxIndex(null)
+                  }}
+                  className="rounded bg-white/10 px-3 py-1.5 text-xs text-red-300 hover:bg-white/20"
+                >
+                  Удалить
+                </button>
+              </>
+            )
+          }}
+        />
+      )}
     </div>
   )
 }

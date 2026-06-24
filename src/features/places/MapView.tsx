@@ -25,6 +25,7 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
   const mapRef = useRef<google.maps.Map | null>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null)
   const [searchValue, setSearchValue] = useState('')
 
   const lookupPlaceDetails = useCallback(
@@ -46,6 +47,31 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
     [onMapClick],
   )
 
+  // Locality/city labels on the base map don't carry a placeId like POI icons do —
+  // reverse-geocode as a fallback so clicking a city still suggests its name.
+  const reverseGeocodeName = useCallback(
+    (lat: number, lng: number) => {
+      if (!geocoderRef.current) {
+        geocoderRef.current = new google.maps.Geocoder()
+      }
+      geocoderRef.current.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status !== google.maps.GeocoderStatus.OK || !results?.length) {
+          onMapClick(lat, lng)
+          return
+        }
+        const components = results[0].address_components
+        const findType = (type: string) => components.find((c) => c.types.includes(type))?.long_name
+        const name =
+          findType('locality') ??
+          findType('postal_town') ??
+          findType('administrative_area_level_2') ??
+          findType('administrative_area_level_1')
+        onMapClick(lat, lng, name)
+      })
+    },
+    [onMapClick],
+  )
+
   const handleClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
@@ -55,9 +81,9 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
         lookupPlaceDetails(placeId, e.latLng.lat(), e.latLng.lng())
         return
       }
-      onMapClick(e.latLng.lat(), e.latLng.lng())
+      reverseGeocodeName(e.latLng.lat(), e.latLng.lng())
     },
-    [onMapClick, lookupPlaceDetails],
+    [reverseGeocodeName, lookupPlaceDetails],
   )
 
   const goToLocation = (lat: number, lng: number, name?: string) => {
