@@ -48,7 +48,10 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
   )
 
   // Locality/city labels on the base map don't carry a placeId like POI icons do —
-  // reverse-geocode as a fallback so clicking a city still suggests its name.
+  // reverse-geocode as a fallback so clicking a city still suggests its name. Each
+  // geocode result carries its own place_id, so once we find the locality-level
+  // result we can feed its place_id back through the same Places lookup used for
+  // POI clicks — that's what gets the city its name *and* photos, not just a name.
   const reverseGeocodeName = useCallback(
     (lat: number, lng: number) => {
       if (!geocoderRef.current) {
@@ -59,17 +62,22 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
           onMapClick(lat, lng)
           return
         }
-        const components = results[0].address_components
-        const findType = (type: string) => components.find((c) => c.types.includes(type))?.long_name
-        const name =
-          findType('locality') ??
-          findType('postal_town') ??
-          findType('administrative_area_level_2') ??
-          findType('administrative_area_level_1')
+        const localityResult =
+          results.find((r) => r.types.includes('locality')) ??
+          results.find((r) => r.types.includes('postal_town')) ??
+          results.find((r) => r.types.includes('administrative_area_level_2')) ??
+          results.find((r) => r.types.includes('administrative_area_level_1'))
+
+        if (localityResult?.place_id) {
+          lookupPlaceDetails(localityResult.place_id, lat, lng)
+          return
+        }
+
+        const name = results[0].address_components.find((c) => c.types.includes('locality'))?.long_name
         onMapClick(lat, lng, name)
       })
     },
-    [onMapClick],
+    [onMapClick, lookupPlaceDetails],
   )
 
   const handleClick = useCallback(
