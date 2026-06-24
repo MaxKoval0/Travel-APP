@@ -109,6 +109,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const systemPrompt = `You extract a list of trip items from free-form, possibly messy/conversational text (it may be a chat transcript or rough notes, not a clean list).
 
+Write every text field (title, category, notes, cost_estimate, duration_estimate, suggested_trip_title) in Russian,
+regardless of what language the input text is in. The only exception is proper nouns — place names, brand names,
+people's names — which should stay as given in the source text (or in their conventional Russian transliteration if
+the source already used one) rather than being translated.
+
 For each item, return:
 - title: a short, clear name for the activity or place
 - category, cost_estimate, duration_estimate, confidence, area: extract these FIRST (see rules below), THEN

@@ -20,6 +20,9 @@ dist-ssr
 # Vercel
 .vercel
 
+# Claude Code personal overrides
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

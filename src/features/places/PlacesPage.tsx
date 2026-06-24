@@ -9,7 +9,12 @@ export default function PlacesPage() {
   const { data: places } = usePlaces()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedPlaceId = searchParams.get('place')
-  const [pendingNewPlace, setPendingNewPlace] = useState<{ lat: number; lng: number; name?: string } | null>(null)
+  const [pendingNewPlace, setPendingNewPlace] = useState<{
+    lat: number
+    lng: number
+    name?: string
+    photoUrls?: string[]
+  } | null>(null)
 
   const selectPlace = (id: string | null) => {
     setPendingNewPlace(null)
@@ -27,8 +32,9 @@ export default function PlacesPage() {
         <MapView
           places={places ?? []}
           selectedPlaceId={selectedPlaceId}
+          pendingLocation={pendingNewPlace}
           onSelectPlace={(id) => selectPlace(id)}
-          onMapClick={(lat, lng, name) => {
+          onMapClick={(lat, lng, name, photoUrls) => {
             setSearchParams(
               (prev) => {
                 const next = new URLSearchParams(prev)
@@ -37,7 +43,7 @@ export default function PlacesPage() {
               },
               { replace: true },
             )
-            setPendingNewPlace({ lat, lng, name })
+            setPendingNewPlace({ lat, lng, name, photoUrls })
           }}
         />
       </div>
@@ -46,9 +52,11 @@ export default function PlacesPage() {
         <div className="z-10 h-[45%] w-full border-t border-slate-200 bg-white shadow-lg md:h-full md:w-96 md:border-l md:border-t-0">
           {pendingNewPlace ? (
             <PlaceForm
+              key={`${pendingNewPlace.lat}-${pendingNewPlace.lng}`}
               lat={pendingNewPlace.lat}
               lng={pendingNewPlace.lng}
               initialName={pendingNewPlace.name}
+              googlePhotoUrls={pendingNewPlace.photoUrls}
               onCancel={() => setPendingNewPlace(null)}
               onSaved={(id) => {
                 setPendingNewPlace(null)

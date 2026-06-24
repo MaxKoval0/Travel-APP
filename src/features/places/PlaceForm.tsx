@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import type { FpvStatus, TouristStatus } from '../../lib/database.types'
 import { useCreatePlace } from '../../hooks/usePlaces'
+import { useAddPlacePhotoFromUrl } from '../../hooks/usePlacePhotos'
 import { FPV_STATUS_LABELS, TOURIST_STATUS_LABELS } from './statusStyles'
 
 interface PlaceFormProps {
   lat: number
   lng: number
   initialName?: string
+  googlePhotoUrls?: string[]
   onSaved: (id: string) => void
   onCancel: () => void
 }
@@ -14,13 +16,24 @@ interface PlaceFormProps {
 const TOURIST_STATUSES: TouristStatus[] = ['top', 'normal']
 const FPV_STATUSES: FpvStatus[] = ['allowed', 'unclear', 'banned']
 
-export default function PlaceForm({ lat, lng, initialName, onSaved, onCancel }: PlaceFormProps) {
+export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSaved, onCancel }: PlaceFormProps) {
   const [name, setName] = useState(initialName ?? '')
   const [touristStatus, setTouristStatus] = useState<TouristStatus | null>(null)
   const [fpvStatus, setFpvStatus] = useState<FpvStatus | null>(null)
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
   const createPlace = useCreatePlace()
+  const addPhotoFromUrl = useAddPlacePhotoFromUrl()
+
+  const togglePhoto = (url: string) => {
+    setSelectedPhotos((prev) => {
+      const next = new Set(prev)
+      if (next.has(url)) next.delete(url)
+      else next.add(url)
+      return next
+    })
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -34,6 +47,11 @@ export default function PlaceForm({ lat, lng, initialName, onSaved, onCancel }: 
       description: description.trim() || null,
       notes: notes.trim() || null,
     })
+    if (selectedPhotos.size > 0) {
+      await Promise.all(
+        [...selectedPhotos].map((url) => addPhotoFromUrl.mutateAsync({ placeId: place.id, imageUrl: url })),
+      )
+    }
     onSaved(place.id)
   }
 
@@ -54,6 +72,34 @@ export default function PlaceForm({ lat, lng, initialName, onSaved, onCancel }: 
           placeholder="Название места"
         />
       </label>
+
+      {googlePhotoUrls && googlePhotoUrls.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-400">Фото из Google — выбери, какие сохранить</span>
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {googlePhotoUrls.map((url) => {
+              const isSelected = selectedPhotos.has(url)
+              return (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => togglePhoto(url)}
+                  className={`relative h-16 w-16 shrink-0 overflow-hidden rounded border-2 ${
+                    isSelected ? 'border-emerald-500' : 'border-transparent'
+                  }`}
+                >
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  {isSelected && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-emerald-600/40 text-lg text-white">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-slate-400">Туристический статус (необязательно)</span>
@@ -121,10 +167,10 @@ export default function PlaceForm({ lat, lng, initialName, onSaved, onCancel }: 
         </button>
         <button
           type="submit"
-          disabled={!name.trim() || createPlace.isPending}
+          disabled={!name.trim() || createPlace.isPending || addPhotoFromUrl.isPending}
           className="flex-1 rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {createPlace.isPending ? 'Сохранение…' : 'Сохранить'}
+          {createPlace.isPending || addPhotoFromUrl.isPending ? 'Сохранение…' : 'Сохранить'}
         </button>
       </div>
     </form>

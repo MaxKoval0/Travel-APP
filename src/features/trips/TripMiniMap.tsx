@@ -147,7 +147,7 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
               onClick={point.placeId ? () => onOpenPlace(point.placeId!) : undefined}
             />
           ))}
-          {pendingPoint && <MapPin lat={pendingPoint.lat} lng={pendingPoint.lng} />}
+          {pendingPoint && <MapPin lat={pendingPoint.lat} lng={pendingPoint.lng} pending selected />}
         </GoogleMap>
 
         {expanded && !pendingPoint && (

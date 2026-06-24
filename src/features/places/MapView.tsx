@@ -10,11 +10,12 @@ const COORD_PATTERN = /^\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$
 interface MapViewProps {
   places: Place[]
   selectedPlaceId: string | null
+  pendingLocation: { lat: number; lng: number } | null
   onSelectPlace: (id: string) => void
-  onMapClick: (lat: number, lng: number, name?: string) => void
+  onMapClick: (lat: number, lng: number, name?: string, photoUrls?: string[]) => void
 }
 
-export default function MapView({ places, selectedPlaceId, onSelectPlace, onMapClick }: MapViewProps) {
+export default function MapView({ places, selectedPlaceId, pendingLocation, onSelectPlace, onMapClick }: MapViewProps) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || '',
@@ -23,13 +24,40 @@ export default function MapView({ places, selectedPlaceId, onSelectPlace, onMapC
   })
   const mapRef = useRef<google.maps.Map | null>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
   const [searchValue, setSearchValue] = useState('')
+
+  const lookupPlaceDetails = useCallback(
+    (placeId: string, fallbackLat: number, fallbackLng: number) => {
+      if (!mapRef.current) return
+      if (!placesServiceRef.current) {
+        placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
+      }
+      placesServiceRef.current.getDetails({ placeId, fields: ['name', 'geometry', 'photos'] }, (place, status) => {
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
+          onMapClick(fallbackLat, fallbackLng)
+          return
+        }
+        const loc = place.geometry?.location
+        const photoUrls = (place.photos ?? []).slice(0, 6).map((p) => p.getUrl({ maxWidth: 800 }))
+        onMapClick(loc ? loc.lat() : fallbackLat, loc ? loc.lng() : fallbackLng, place.name, photoUrls)
+      })
+    },
+    [onMapClick],
+  )
 
   const handleClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
-      if (e.latLng) onMapClick(e.latLng.lat(), e.latLng.lng())
+      if (!e.latLng) return
+      const placeId = (e as google.maps.IconMouseEvent).placeId
+      if (placeId) {
+        ;(e as google.maps.IconMouseEvent).stop()
+        lookupPlaceDetails(placeId, e.latLng.lat(), e.latLng.lng())
+        return
+      }
+      onMapClick(e.latLng.lat(), e.latLng.lng())
     },
-    [onMapClick],
+    [onMapClick, lookupPlaceDetails],
   )
 
   const goToLocation = (lat: number, lng: number, name?: string) => {
@@ -107,6 +135,7 @@ export default function MapView({ places, selectedPlaceId, onSelectPlace, onMapC
             onClick={() => onSelectPlace(place.id)}
           />
         ))}
+        {pendingLocation && <MapPin lat={pendingLocation.lat} lng={pendingLocation.lng} pending selected />}
       </GoogleMap>
     </div>
   )
