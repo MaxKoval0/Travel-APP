@@ -43,7 +43,13 @@ export default function PlacesPage() {
               },
               { replace: true },
             )
-            setPendingNewPlace({ lat, lng, name, photoUrls })
+            setPendingNewPlace((prev) => {
+              // Same pin, lookup just resolved — enrich the already-open form in place.
+              if (prev && prev.lat === lat && prev.lng === lng) {
+                return { lat, lng, name: name ?? prev.name, photoUrls: photoUrls ?? prev.photoUrls }
+              }
+              return { lat, lng, name, photoUrls }
+            })
           }}
         />
       </div>

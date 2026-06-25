@@ -19,6 +19,7 @@ const FPV_STATUSES: FpvStatus[] = ['allowed', 'unclear', 'banned']
 
 export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSaved, onCancel }: PlaceFormProps) {
   const [name, setName] = useState(initialName ?? '')
+  const [nameEdited, setNameEdited] = useState(false)
   const [touristStatus, setTouristStatus] = useState<TouristStatus | null>(null)
   const [fpvStatus, setFpvStatus] = useState<FpvStatus | null>(null)
   const [description, setDescription] = useState('')
@@ -27,6 +28,22 @@ export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSa
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const createPlace = useCreatePlace()
   const addPhotoFromUrl = useAddPlacePhotoFromUrl()
+
+  // The pin shows up instantly on click, but its name/photos resolve asynchronously
+  // afterwards and arrive as prop updates to this already-mounted form. Adjust state
+  // during render (React's recommended alternative to syncing props via an effect)
+  // so they're picked up without clobbering anything the user already typed.
+  const [prevInitialName, setPrevInitialName] = useState(initialName)
+  if (initialName !== prevInitialName) {
+    setPrevInitialName(initialName)
+    if (!nameEdited && initialName) setName(initialName)
+  }
+
+  const [prevGooglePhotoUrls, setPrevGooglePhotoUrls] = useState(googlePhotoUrls)
+  if (googlePhotoUrls !== prevGooglePhotoUrls) {
+    setPrevGooglePhotoUrls(googlePhotoUrls)
+    if (googlePhotoUrls) setSelectedPhotos(new Set(googlePhotoUrls))
+  }
 
   const togglePhoto = (url: string) => {
     setSelectedPhotos((prev) => {
@@ -69,7 +86,10 @@ export default function PlaceForm({ lat, lng, initialName, googlePhotoUrls, onSa
         <input
           autoFocus
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value)
+            setNameEdited(true)
+          }}
           className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
           placeholder="Название места"
         />

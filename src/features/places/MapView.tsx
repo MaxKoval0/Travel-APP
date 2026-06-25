@@ -26,22 +26,24 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
   const geocoderRef = useRef<google.maps.Geocoder | null>(null)
+  // Tracks the most recent click/search so a slow lookup from an earlier one can't
+  // clobber a newer pending pin if the user clicks elsewhere before it resolves.
+  const latestTargetRef = useRef<{ lat: number; lng: number } | null>(null)
   const [searchValue, setSearchValue] = useState('')
 
+  const isStale = (lat: number, lng: number) =>
+    latestTargetRef.current?.lat !== lat || latestTargetRef.current?.lng !== lng
+
   const lookupPlaceDetails = useCallback(
-    (placeId: string, fallbackLat: number, fallbackLng: number) => {
+    (placeId: string, lat: number, lng: number) => {
       if (!mapRef.current) return
       if (!placesServiceRef.current) {
         placesServiceRef.current = new google.maps.places.PlacesService(mapRef.current)
       }
-      placesServiceRef.current.getDetails({ placeId, fields: ['name', 'geometry', 'photos'] }, (place, status) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
-          onMapClick(fallbackLat, fallbackLng)
-          return
-        }
-        const loc = place.geometry?.location
+      placesServiceRef.current.getDetails({ placeId, fields: ['name', 'photos'] }, (place, status) => {
+        if (isStale(lat, lng) || status !== google.maps.places.PlacesServiceStatus.OK || !place) return
         const photoUrls = (place.photos ?? []).slice(0, 6).map((p) => p.getUrl({ maxWidth: 800 }))
-        onMapClick(loc ? loc.lat() : fallbackLat, loc ? loc.lng() : fallbackLng, place.name, photoUrls)
+        onMapClick(lat, lng, place.name, photoUrls)
       })
     },
     [onMapClick],
@@ -58,10 +60,8 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
         geocoderRef.current = new google.maps.Geocoder()
       }
       geocoderRef.current.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status !== google.maps.GeocoderStatus.OK || !results?.length) {
-          onMapClick(lat, lng)
-          return
-        }
+        if (isStale(lat, lng) || status !== google.maps.GeocoderStatus.OK || !results?.length) return
+
         const localityResult =
           results.find((r) => r.types.includes('locality')) ??
           results.find((r) => r.types.includes('postal_town')) ??
@@ -74,46 +74,56 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
         }
 
         const name = results[0].address_components.find((c) => c.types.includes('locality'))?.long_name
-        onMapClick(lat, lng, name)
+        if (name) onMapClick(lat, lng, name)
       })
     },
     [onMapClick, lookupPlaceDetails],
   )
 
+  // Show the pin and open the form the instant a location is picked — never wait on a
+  // network lookup just to give the user feedback that their click registered. Name and
+  // photos arrive afterwards, asynchronously, and only enrich the already-open form.
+  const pickLocation = useCallback(
+    (lat: number, lng: number) => {
+      latestTargetRef.current = { lat, lng }
+      onMapClick(lat, lng)
+    },
+    [onMapClick],
+  )
+
   const handleClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
+      const lat = e.latLng.lat()
+      const lng = e.latLng.lng()
+      pickLocation(lat, lng)
       const placeId = (e as google.maps.IconMouseEvent).placeId
       if (placeId) {
         ;(e as google.maps.IconMouseEvent).stop()
-        lookupPlaceDetails(placeId, e.latLng.lat(), e.latLng.lng())
+        lookupPlaceDetails(placeId, lat, lng)
         return
       }
-      reverseGeocodeName(e.latLng.lat(), e.latLng.lng())
+      reverseGeocodeName(lat, lng)
     },
-    [reverseGeocodeName, lookupPlaceDetails],
+    [pickLocation, reverseGeocodeName, lookupPlaceDetails],
   )
-
-  const goToLocation = (lat: number, lng: number, name?: string, photoUrls?: string[]) => {
-    mapRef.current?.panTo({ lat, lng })
-    mapRef.current?.setZoom(14)
-    onMapClick(lat, lng, name, photoUrls)
-    setSearchValue('')
-  }
 
   const handlePlaceChanged = () => {
     const place = autocompleteRef.current?.getPlace()
     const loc = place?.geometry?.location
     if (!loc) return
+    const lat = loc.lat()
+    const lng = loc.lng()
     mapRef.current?.panTo(loc)
     mapRef.current?.setZoom(14)
     setSearchValue('')
+    pickLocation(lat, lng)
     // Re-fetch through the same lookup the POI-click path uses, rather than trusting
     // the Autocomplete widget's own getPlace() to have populated photos reliably.
     if (place?.place_id) {
-      lookupPlaceDetails(place.place_id, loc.lat(), loc.lng())
-    } else {
-      onMapClick(loc.lat(), loc.lng(), place?.name)
+      lookupPlaceDetails(place.place_id, lat, lng)
+    } else if (place?.name) {
+      onMapClick(lat, lng, place.name)
     }
   }
 
@@ -124,7 +134,11 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
     e.preventDefault()
     const lat = Number(match[1])
     const lng = Number(match[2])
-    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) goToLocation(lat, lng)
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return
+    mapRef.current?.panTo({ lat, lng })
+    mapRef.current?.setZoom(14)
+    setSearchValue('')
+    pickLocation(lat, lng)
   }
 
   if (!apiKey) {
