@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type KeyboardEvent } from 'react'
 import { Autocomplete, GoogleMap, useJsApiLoader } from '@react-google-maps/api'
 import type { Place } from '../../lib/database.types'
-import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from '../../lib/googleMaps'
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID, mapTypeControlOptions } from '../../lib/googleMaps'
 import MapPin from './MapPin'
 
 const DEFAULT_CENTER = { lat: 20, lng: 10 }
@@ -171,7 +171,7 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
         onLoad={(map) => {
           mapRef.current = map
         }}
-        options={{ streetViewControl: false, mapTypeControl: false }}
+        options={{ streetViewControl: false, mapTypeControl: true, mapTypeControlOptions: mapTypeControlOptions() }}
       >
         {places.map((place) => (
           <MapPin

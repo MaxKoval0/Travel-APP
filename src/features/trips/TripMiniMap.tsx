@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
 import { useCreateTripItem } from '../../hooks/useTripItems'
-import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID } from '../../lib/googleMaps'
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID, mapTypeControlOptions } from '../../lib/googleMaps'
 import type { FpvStatus, TouristStatus } from '../../lib/database.types'
 import MapPin from '../places/MapPin'
 import type { TripItemWithPlace } from './types'
@@ -133,7 +133,12 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
           center={center}
           zoom={points.length > 1 ? 5 : points.length === 1 ? 9 : 2}
           onClick={handleMapClick}
-          options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: false }}
+          options={{
+            streetViewControl: false,
+            fullscreenControl: false,
+            mapTypeControl: expanded,
+            mapTypeControlOptions: mapTypeControlOptions(),
+          }}
         >
           {points.map((point) => (
             <MapPin
