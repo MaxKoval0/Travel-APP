@@ -27,6 +27,9 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
   const [tripTitle, setTripTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  // Set once a new trip is created so a retry after a partial failure reuses it
+  // instead of creating a second trip for the same import.
+  const [createdTripId, setCreatedTripId] = useState<string | null>(null)
 
   const handleParse = async () => {
     if (!text.trim()) return
@@ -60,25 +63,46 @@ export default function TextImportForm({ tripId, tripDateStart, onClose }: TextI
     setIsSaving(true)
     setError(null)
     try {
-      let targetTripId = tripId
+      let targetTripId = tripId ?? createdTripId
       if (!targetTripId) {
         const trip = await createTrip.mutateAsync({ title: tripTitle.trim() || 'Новая поездка' })
         targetTripId = trip.id
+        setCreatedTripId(trip.id)
       }
 
+      // Keep going even if one item fails — a single bad/transient request shouldn't
+      // sink the rest of the batch, and the ones already saved shouldn't vanish from
+      // view. Whatever's left in `failed` stays in the review list so the user can
+      // just hit "Добавить" again for those, instead of redoing the whole import.
+      const failed: { item: EditableItem; message: string }[] = []
       for (const item of itemsToCreate) {
-        await createTripItem.mutateAsync({
-          trip_id: targetTripId,
-          title: item.title,
-          notes: item.notes,
-          date: item.date,
-          place_id: item.matched_place_id,
-          confidence: item.confidence,
-          category: item.category,
-          area: item.area,
-          cost_estimate: item.cost_estimate,
-          duration_estimate: item.duration_estimate,
-        })
+        try {
+          await createTripItem.mutateAsync({
+            trip_id: targetTripId,
+            title: item.title,
+            notes: item.notes,
+            date: item.date,
+            place_id: item.matched_place_id,
+            confidence: item.confidence,
+            category: item.category,
+            area: item.area,
+            cost_estimate: item.cost_estimate,
+            duration_estimate: item.duration_estimate,
+          })
+        } catch (err) {
+          failed.push({ item, message: err instanceof Error ? err.message : String(err) })
+        }
+      }
+
+      if (failed.length > 0) {
+        setResult({ ...result, items: failed.map((f) => f.item) })
+        const savedCount = itemsToCreate.length - failed.length
+        setError(
+          `Сохранено ${savedCount} из ${itemsToCreate.length}. Не удалось: ${failed
+            .map((f) => f.item.title)
+            .join(', ')} (${failed[0].message}). Можно нажать «Добавить» ещё раз — остальные не задвоятся.`,
+        )
+        return
       }
 
       onClose()
