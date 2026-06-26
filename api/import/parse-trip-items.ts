@@ -117,19 +117,23 @@ the source already used one) rather than being translated.
 For each item, return:
 - title: a short, clear name for the activity or place
 - category, cost_estimate, duration_estimate, confidence, area: extract these FIRST (see rules below), THEN
-- notes: capture EVERYTHING from the source that isn't already captured by category/cost_estimate/duration_estimate/confidence/area.
-  This explicitly includes transportation/logistics (how to get there — trains, buses, line numbers, transfer points, taxi legs,
-  walking distances, schedule caveats like "no Sunday service"), accommodation/overnight specifics (where to base yourself,
-  price ranges), and named routes or trails with their distances — preserve these IN FULL, in detail, exactly as given. Do not
-  summarize, shorten, or drop concrete details (numbers, place names, line numbers, distances) just because the source paragraph
-  was long — a long, detailed source item should produce a long, detailed notes field, not a trimmed-down one.
-  A transportation/logistics passage that happens to mention a price or duration (e.g. "поезд ~1ч50м, от 11€") belongs in notes
-  IN FULL even though that same number is also separately pulled into cost_estimate/duration_estimate below — that's two fields
-  each doing their job, not duplication. What must NOT appear in notes is a separate, redundant summary sentence that adds no
-  new information beyond restating category/price/duration (e.g. a standalone "Стоимость 11€, длительность полдня" with nothing
-  else) — that bare restatement is the bug to avoid, not every number that happens to also appear elsewhere. Set notes to null
-  only if there is genuinely nothing left to say once the other fields are extracted — for most real items with any logistics
-  detail in the source, a substantial notes field is the normal, expected outcome, not something to avoid.
+- notes: everything genuinely useful that doesn't fit category/cost_estimate/duration_estimate/confidence/area. Most commonly
+  this is transportation/logistics (how to get there — trains, buses, line numbers, transfer points, taxi legs, walking
+  distances, schedule caveats like "no Sunday service"), accommodation/overnight specifics (where to base yourself, price
+  ranges), and named routes or trails with their distances. Preserve these IN FULL, in detail, exactly as given — do not
+  summarize, shorten, or drop concrete numbers/names/distances just because the source paragraph was long.
+  If the source has a labeled "Категория: ..." or "Длительность: ..." line (or an English equivalent like "Category:"/
+  "Duration:"), that exact line — the label AND its value — must NOT appear in notes once you've pulled it into category/
+  duration_estimate, even if it sits in the same paragraph as logistics text you ARE keeping. Worked example — given:
+    "Категория: исторический город. Как добраться: поезд ~2ч, от 11€. Длительность: полдня"
+  the correct output is category="исторический город", cost_estimate="от 11€", duration_estimate="полдня", and
+  notes="Как добраться: поезд ~2ч, от 11€." — the "Категория:"/"Длительность:" labels and their values are gone from notes
+  entirely, while the transportation sentence (including its own price mention) stays untouched. A price or duration
+  mentioned naturally inside a logistics/transport sentence is NOT the same as a "Длительность:"-labeled line and should
+  stay in notes even though that number is also pulled into cost_estimate/duration_estimate — only the labeled
+  category/duration lines themselves get removed. Set notes to null only if nothing is left once those labeled lines are
+  removed — for most real items with any logistics detail in the source, a substantial notes field is still the normal,
+  expected outcome.
 - date: MUST be either a valid YYYY-MM-DD string or null — nothing else is acceptable in this field.
   The trip starts on ${tripDateStart ?? 'an unknown date'}. Resolve relative dates ("second day", "on the way back") to YYYY-MM-DD ONLY if the start date is known and the resolution is unambiguous.
   If a date is mentioned but cannot be resolved to a valid YYYY-MM-DD (e.g. the start date is unknown), set date to null and put the original phrase ("second day", etc.) into notes instead — never put non-date text in the date field.
