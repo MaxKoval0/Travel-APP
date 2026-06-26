@@ -40,6 +40,10 @@ export function useCreateTripItem() {
       if (error) throw error
       return data
     },
+    // Bulk text-import creates these one at a time in a loop — worth a couple of
+    // automatic retries so a single flaky request (e.g. on mobile networks) doesn't
+    // need a manual re-click for what's otherwise a perfectly valid item.
+    retry: 2,
     onSuccess: (data) => qc.invalidateQueries({ queryKey: ['trip-items', data.trip_id] }),
   })
 }

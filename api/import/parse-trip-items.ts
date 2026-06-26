@@ -117,17 +117,31 @@ the source already used one) rather than being translated.
 For each item, return:
 - title: a short, clear name for the activity or place
 - category, cost_estimate, duration_estimate, confidence, area: extract these FIRST (see rules below), THEN
-- notes: ONLY genuinely extra detail that is NOT already captured by category/cost_estimate/duration_estimate/confidence/area —
-  e.g. why it's worth doing, a tip, a caveat. Do NOT restate the category, price, or duration as a sentence in notes —
-  that information already has its own field and showing it twice is a bug, not a feature. If there is nothing left to
-  say once category/price/duration/confidence are extracted, set notes to null — an empty notes field is the normal,
-  expected result for most items, not something to avoid.
+- notes: capture EVERYTHING from the source that isn't already captured by category/cost_estimate/duration_estimate/confidence/area.
+  This explicitly includes transportation/logistics (how to get there — trains, buses, line numbers, transfer points, taxi legs,
+  walking distances, schedule caveats like "no Sunday service"), accommodation/overnight specifics (where to base yourself,
+  price ranges), and named routes or trails with their distances — preserve these IN FULL, in detail, exactly as given. Do not
+  summarize, shorten, or drop concrete details (numbers, place names, line numbers, distances) just because the source paragraph
+  was long — a long, detailed source item should produce a long, detailed notes field, not a trimmed-down one.
+  A transportation/logistics passage that happens to mention a price or duration (e.g. "поезд ~1ч50м, от 11€") belongs in notes
+  IN FULL even though that same number is also separately pulled into cost_estimate/duration_estimate below — that's two fields
+  each doing their job, not duplication. What must NOT appear in notes is a separate, redundant summary sentence that adds no
+  new information beyond restating category/price/duration (e.g. a standalone "Стоимость 11€, длительность полдня" with nothing
+  else) — that bare restatement is the bug to avoid, not every number that happens to also appear elsewhere. Set notes to null
+  only if there is genuinely nothing left to say once the other fields are extracted — for most real items with any logistics
+  detail in the source, a substantial notes field is the normal, expected outcome, not something to avoid.
 - date: MUST be either a valid YYYY-MM-DD string or null — nothing else is acceptable in this field.
   The trip starts on ${tripDateStart ?? 'an unknown date'}. Resolve relative dates ("second day", "on the way back") to YYYY-MM-DD ONLY if the start date is known and the resolution is unambiguous.
   If a date is mentioned but cannot be resolved to a valid YYYY-MM-DD (e.g. the start date is unknown), set date to null and put the original phrase ("second day", etc.) into notes instead — never put non-date text in the date field.
-- matched_place_id: ONLY set this to one of the existing place ids below if the item clearly refers to that exact place. Never invent an id. Use null if unsure or not in the list.
+- matched_place_id: ONLY set this to one of the existing place ids below if the item refers to that exact same real-world place —
+  not merely a similar category or theme (e.g. "desert hike" and "coastal cove" are never the same place no matter how outdoorsy
+  both are). Matching by name is the strong signal; matching by vague similarity is a hallucination, not a match. A wrong match is
+  worse than no match, since it would silently treat the imported item as if it were a place it isn't. Never invent an id — use
+  null whenever you're not confident it's the same place, which is the normal, expected value for anything not already in the list.
 - confidence: "confirmed" / "possible" / "questionable" — only if the text gives a real signal about how settled this is. Null otherwise, do not guess.
-- category, cost_estimate, duration_estimate: short free text, only if mentioned or clearly implied. Null otherwise — do not invent prices or durations that aren't in the text.
+- category, cost_estimate, duration_estimate: short free text, only if mentioned or clearly implied anywhere in the source —
+  including inside a transportation/logistics passage you're also keeping in notes (e.g. "поезд ~1ч50м, от 11€" gives both
+  cost_estimate="от 11€" and duration_estimate hints). Null otherwise — do not invent prices or durations that aren't in the text.
 - area: only when the text intentionally groups several items together (a heading, a "Пригород:"-style prefix, explicit "same day/region" framing). An incidental geographic word inside a description (e.g. "the largest in Europe") is NOT a grouping signal. Null is the normal, expected value for most items.
 
 Existing places (id: name):
