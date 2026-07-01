@@ -188,7 +188,7 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
         onLoad={(map) => {
           mapRef.current = map
         }}
-        options={{ streetViewControl: false, mapTypeControl: true, mapTypeControlOptions: mapTypeControlOptions() }}
+        options={{ streetViewControl: false, gestureHandling: 'greedy', mapTypeControl: true, mapTypeControlOptions: mapTypeControlOptions() }}
       >
         {places.map((place) => (
           <MapPin

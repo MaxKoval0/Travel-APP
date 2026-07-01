@@ -165,6 +165,7 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
           options={{
             streetViewControl: false,
             fullscreenControl: false,
+            gestureHandling: expanded ? 'greedy' : 'cooperative',
             mapTypeControl: expanded,
             mapTypeControlOptions: mapTypeControlOptions(),
           }}
