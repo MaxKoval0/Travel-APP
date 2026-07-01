@@ -199,6 +199,10 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
             fpvStatus={place.fpv_status}
             visited={place.visited}
             selected={selectedPlaceId === place.id}
+            onPointerDown={() => {
+              pinClickedRef.current = true
+              setTimeout(() => { pinClickedRef.current = false }, 400)
+            }}
             onClick={() => {
               pinClickedRef.current = true
               onSelectPlace(place.id)

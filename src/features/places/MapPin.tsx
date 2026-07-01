@@ -21,6 +21,7 @@ interface MapPinProps {
   pending?: boolean
   label?: string
   onClick?: () => void
+  onPointerDown?: () => void
 }
 
 export default function MapPin({
@@ -33,6 +34,7 @@ export default function MapPin({
   pending,
   label,
   onClick,
+  onPointerDown,
 }: MapPinProps) {
   const scale = (selected ? 1.35 : 1) * (BASE_DISPLAY_WIDTH / VIEW_WIDTH)
   const width = VIEW_WIDTH * scale
@@ -43,6 +45,7 @@ export default function MapPin({
   return (
     <OverlayView position={{ lat, lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
       <div
+        onPointerDown={() => onPointerDown?.()}
         onClick={(e) => {
           if (!onClick) return
           e.stopPropagation()

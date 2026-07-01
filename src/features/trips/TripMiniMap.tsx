@@ -178,6 +178,10 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
               touristStatus={point.touristStatus}
               fpvStatus={point.fpvStatus}
               visited={point.muted}
+              onPointerDown={point.placeId ? () => {
+                pinClickedRef.current = true
+                setTimeout(() => { pinClickedRef.current = false }, 400)
+              } : undefined}
               onClick={point.placeId ? () => {
                 pinClickedRef.current = true
                 onOpenPlace(point.placeId!)
