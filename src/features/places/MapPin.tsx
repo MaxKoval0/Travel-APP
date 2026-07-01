@@ -48,9 +48,10 @@ export default function MapPin({
           e.stopPropagation()
           onClick()
         }}
-        className="flex -translate-x-1/2 -translate-y-full flex-col items-center"
+        className="relative flex -translate-x-1/2 -translate-y-full flex-col items-center"
         style={{ cursor: onClick ? 'pointer' : 'default' }}
       >
+        {onClick && <div className="absolute -inset-4" />}
         {label && (
           <span className="mb-0.5 max-w-[120px] truncate rounded bg-white px-1 text-[10px] font-medium text-slate-700 shadow">
             {label}
