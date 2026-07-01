@@ -26,9 +26,8 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
   const geocoderRef = useRef<google.maps.Geocoder | null>(null)
-  // Tracks the most recent click/search so a slow lookup from an earlier one can't
-  // clobber a newer pending pin if the user clicks elsewhere before it resolves.
   const latestTargetRef = useRef<{ lat: number; lng: number } | null>(null)
+  const pinClickedRef = useRef(false)
   const [searchValue, setSearchValue] = useState('')
 
   const isStale = (lat: number, lng: number) =>
@@ -93,6 +92,10 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
 
   const handleClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
+      if (pinClickedRef.current) {
+        pinClickedRef.current = false
+        return
+      }
       if (!e.latLng) return
       const lat = e.latLng.lat()
       const lng = e.latLng.lng()
@@ -196,7 +199,10 @@ export default function MapView({ places, selectedPlaceId, pendingLocation, onSe
             fpvStatus={place.fpv_status}
             visited={place.visited}
             selected={selectedPlaceId === place.id}
-            onClick={() => onSelectPlace(place.id)}
+            onClick={() => {
+              pinClickedRef.current = true
+              onSelectPlace(place.id)
+            }}
           />
         ))}
         {pendingLocation && <MapPin lat={pendingLocation.lat} lng={pendingLocation.lng} pending selected />}

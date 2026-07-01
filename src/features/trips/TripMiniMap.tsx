@@ -1,10 +1,12 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
 import { useCreateTripItem } from '../../hooks/useTripItems'
 import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID, mapTypeControlOptions } from '../../lib/googleMaps'
 import type { FpvStatus, TouristStatus } from '../../lib/database.types'
 import MapPin from '../places/MapPin'
 import type { TripItemWithPlace } from './types'
+
+const DEFAULT_CENTER = { lat: 20, lng: 10 }
 
 interface Point {
   id: string
@@ -31,6 +33,9 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
     libraries: GOOGLE_MAPS_LIBRARIES,
   })
   const createItem = useCreateTripItem()
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const initialFitDoneRef = useRef(false)
+  const pinClickedRef = useRef(false)
 
   const [expanded, setExpanded] = useState(false)
   const [pendingPoint, setPendingPoint] = useState<{ lat: number; lng: number } | null>(null)
@@ -56,7 +61,29 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
     return result
   }, [items])
 
+  const fitBounds = useCallback(() => {
+    const map = mapRef.current
+    if (!map || initialFitDoneRef.current || points.length === 0) return
+    if (points.length === 1) {
+      map.setCenter({ lat: points[0].lat, lng: points[0].lng })
+      map.setZoom(9)
+    } else {
+      const bounds = new google.maps.LatLngBounds()
+      points.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }))
+      map.fitBounds(bounds, 40)
+    }
+    initialFitDoneRef.current = true
+  }, [points])
+
+  useEffect(() => {
+    fitBounds()
+  }, [fitBounds])
+
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (pinClickedRef.current) {
+      pinClickedRef.current = false
+      return
+    }
     if (!expanded || !e.latLng) return
     setPendingPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() })
     setPendingTitle('')
@@ -89,8 +116,6 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
       </div>
     )
   }
-
-  const center = points.length > 0 ? { lat: points[0].lat, lng: points[0].lng } : { lat: 20, lng: 10 }
 
   return (
     <div className={expanded ? 'fixed inset-0 z-50 flex flex-col bg-white' : 'relative'}>
@@ -130,9 +155,13 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
 
         <GoogleMap
           mapContainerClassName="h-full w-full"
-          center={center}
-          zoom={points.length > 1 ? 5 : points.length === 1 ? 9 : 2}
+          center={DEFAULT_CENTER}
+          zoom={2}
           onClick={handleMapClick}
+          onLoad={(map) => {
+            mapRef.current = map
+            fitBounds()
+          }}
           options={{
             streetViewControl: false,
             fullscreenControl: false,
@@ -149,7 +178,10 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
               touristStatus={point.touristStatus}
               fpvStatus={point.fpvStatus}
               visited={point.muted}
-              onClick={point.placeId ? () => onOpenPlace(point.placeId!) : undefined}
+              onClick={point.placeId ? () => {
+                pinClickedRef.current = true
+                onOpenPlace(point.placeId!)
+              } : undefined}
             />
           ))}
           {pendingPoint && <MapPin lat={pendingPoint.lat} lng={pendingPoint.lng} pending selected />}
