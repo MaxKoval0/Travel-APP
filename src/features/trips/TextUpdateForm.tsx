@@ -92,7 +92,7 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
       for (const { update } of toApply) {
         const patch: Record<string, unknown> = { id: update.item_id }
         for (const field of CHANGED_FIELDS) {
-          if (update[field] !== null) patch[field] = update[field]
+          if (update[field] !== null) patch[field] = update[field] || null
         }
         await updateItem.mutateAsync(patch as { id: string } & Record<string, unknown>)
       }
