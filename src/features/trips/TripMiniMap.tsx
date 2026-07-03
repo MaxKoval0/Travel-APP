@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
+import { GoogleMap, Polyline, useJsApiLoader } from '@react-google-maps/api'
 import { useCreateTripItem } from '../../hooks/useTripItems'
 import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID, mapTypeControlOptions } from '../../lib/googleMaps'
 import type { FpvStatus, TouristStatus } from '../../lib/database.types'
@@ -60,6 +60,21 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
       })
     }
     return result
+  }, [items])
+
+  const routePath = useMemo(() => {
+    const dated = items
+      .filter((item) => {
+        if (!item.date) return false
+        const lat = item.places?.lat ?? item.lat
+        const lng = item.places?.lng ?? item.lng
+        return lat != null && lng != null
+      })
+      .sort((a, b) => a.date!.localeCompare(b.date!))
+    return dated.map((item) => ({
+      lat: (item.places?.lat ?? item.lat)!,
+      lng: (item.places?.lng ?? item.lng)!,
+    }))
   }, [items])
 
   const fitBounds = useCallback(() => {
@@ -202,6 +217,17 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
               } : undefined}
             />
           ))}
+          {routePath.length >= 2 && (
+            <Polyline
+              path={routePath}
+              options={{
+                strokeColor: '#6366f1',
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+                geodesic: true,
+              }}
+            />
+          )}
           {pendingPoint && <MapPin lat={pendingPoint.lat} lng={pendingPoint.lng} pending selected />}
         </GoogleMap>
 
