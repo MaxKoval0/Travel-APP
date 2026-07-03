@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { GoogleMap, Polyline, useJsApiLoader } from '@react-google-maps/api'
+import { DirectionsRenderer, GoogleMap, Polyline, useJsApiLoader } from '@react-google-maps/api'
 import { useCreateTripItem } from '../../hooks/useTripItems'
 import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_LOADER_ID, mapTypeControlOptions } from '../../lib/googleMaps'
 import type { FpvStatus, TouristStatus } from '../../lib/database.types'
@@ -76,6 +76,29 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
       lng: (item.places?.lng ?? item.lng)!,
     }))
   }, [items])
+
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null)
+  const lastRouteKeyRef = useRef('')
+
+  useEffect(() => {
+    const key = routePath.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join('|')
+    if (key === lastRouteKeyRef.current) return
+    lastRouteKeyRef.current = key
+    setDirections(null)
+
+    if (routePath.length < 2 || !isLoaded) return
+
+    const service = new google.maps.DirectionsService()
+    service
+      .route({
+        origin: routePath[0],
+        destination: routePath[routePath.length - 1],
+        waypoints: routePath.slice(1, -1).map((p) => ({ location: p, stopover: true })),
+        travelMode: google.maps.TravelMode.DRIVING,
+      })
+      .then((result) => setDirections(result))
+      .catch(() => {})
+  }, [routePath, isLoaded])
 
   const fitBounds = useCallback(() => {
     const map = mapRef.current
@@ -217,17 +240,30 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
               } : undefined}
             />
           ))}
-          {routePath.length >= 2 && (
-            <Polyline
-              path={routePath}
-              options={{
-                strokeColor: '#6366f1',
-                strokeOpacity: 0.6,
-                strokeWeight: 2,
-                geodesic: true,
-              }}
-            />
-          )}
+          {routePath.length >= 2 &&
+            (directions ? (
+              <DirectionsRenderer
+                directions={directions}
+                options={{
+                  suppressMarkers: true,
+                  polylineOptions: {
+                    strokeColor: '#6366f1',
+                    strokeOpacity: 0.5,
+                    strokeWeight: 3,
+                  },
+                }}
+              />
+            ) : (
+              <Polyline
+                path={routePath}
+                options={{
+                  strokeColor: '#6366f1',
+                  strokeOpacity: 0.25,
+                  strokeWeight: 2,
+                  geodesic: true,
+                }}
+              />
+            ))}
           {pendingPoint && <MapPin lat={pendingPoint.lat} lng={pendingPoint.lng} pending selected />}
         </GoogleMap>
 

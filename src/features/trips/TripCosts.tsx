@@ -23,15 +23,18 @@ export default function TripCosts({ trip, items }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
+  const [showBreakdown, setShowBreakdown] = useState(false)
 
   const expenses: TripExpense[] = (trip.expenses as TripExpense[] | undefined) ?? []
   const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0)
 
+  const itemCosts = items
+    .map((item) => ({ item, cost: parseCost(item.cost_estimate) }))
+    .filter((x): x is { item: (typeof items)[number]; cost: number } => x.cost != null && x.cost > 0)
+
   let planTotal = expensesTotal
   let confirmedTotal = expensesTotal
-  for (const item of items) {
-    const cost = parseCost(item.cost_estimate)
-    if (cost == null) continue
+  for (const { item, cost } of itemCosts) {
     planTotal += cost
     if (item.confidence === 'confirmed') confirmedTotal += cost
   }
@@ -122,19 +125,55 @@ export default function TripCosts({ trip, items }: Props) {
       )}
 
       {hasCosts && (
-        <p className="mt-1 text-xs text-slate-400">
-          {confirmedTotal > 0 && confirmedTotal < planTotal && (
-            <>
-              <span className="font-medium text-emerald-600">{Math.round(confirmedTotal)}€</span>
-              {' факт · '}
-            </>
+        <>
+          <button
+            type="button"
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className="mt-1 flex w-full items-center gap-1 text-xs text-slate-400 hover:text-slate-600"
+          >
+            <span className={`transition-transform ${showBreakdown ? 'rotate-90' : ''}`}>▸</span>
+            {confirmedTotal > 0 && confirmedTotal < planTotal && (
+              <>
+                <span className="font-medium text-emerald-600">{Math.round(confirmedTotal)}€</span>
+                {' факт · '}
+              </>
+            )}
+            <span className={confirmedTotal >= planTotal ? 'font-medium text-emerald-600' : ''}>
+              {confirmedTotal >= planTotal
+                ? `${Math.round(planTotal)}€ итого`
+                : `~${Math.round(planTotal)}€ план`}
+            </span>
+          </button>
+
+          {showBreakdown && (
+            <div className="mt-1 border-t border-slate-100 pt-1 text-xs">
+              {expenses.length > 0 && (
+                <div className="mb-1">
+                  <p className="font-medium text-slate-500">Доп. расходы</p>
+                  {expenses.map((e) => (
+                    <div key={e.id} className="flex items-center justify-between py-0.5 pl-2">
+                      <span className="text-slate-500">{e.title}</span>
+                      <span className="font-medium text-emerald-600">{e.amount}€</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {itemCosts.length > 0 && (
+                <div>
+                  <p className="font-medium text-slate-500">Из пунктов</p>
+                  {itemCosts.map(({ item, cost }) => (
+                    <div key={item.id} className="flex items-center justify-between py-0.5 pl-2">
+                      <span className="text-slate-500">{item.title}</span>
+                      <span className={item.confidence === 'confirmed' ? 'font-medium text-emerald-600' : 'text-slate-400'}>
+                        {item.confidence !== 'confirmed' && '~'}{Math.round(cost)}€
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
-          <span className={confirmedTotal >= planTotal ? 'font-medium text-emerald-600' : ''}>
-            {confirmedTotal >= planTotal
-              ? `${Math.round(planTotal)}€ итого`
-              : `~${Math.round(planTotal)}€ план`}
-          </span>
-        </p>
+        </>
       )}
     </div>
   )
