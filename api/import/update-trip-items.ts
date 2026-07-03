@@ -97,7 +97,9 @@ THINK HOLISTICALLY: A single piece of confirmed info can affect MULTIPLE items. 
 - Distribute dates across the items based on the confirmed schedule
 - Remove old cost estimates for transport TO the base city (ticket is already bought)
 
-For EACH existing item, ask: "Does the user's new info change how this item's logistics work?" If yes, update it.
+GEOGRAPHICAL SCHEDULING: When assigning dates, group items by geographical proximity to confirmed base cities. If the user stays in Benidorm on days 4-5 then travels to Almería on day 6, ALL items near Benidorm (within ~50-80 km: Guadalest, Cala Moraig, Els Arcs, etc.) must be scheduled during days 4-5, NOT after arriving in Almería. Use your real-world knowledge of geography to determine proximity — do not assign a coastal Costa Blanca location to a stay in Almería 300+ km away.
+
+For EACH existing item, ask: "Does the user's new info change how this item's logistics work? Is this item near a confirmed base city?" If yes, update it.
 
 RULES FOR NOTES — full rewrite, not merge:
 When you update notes, write them FROM SCRATCH as a clean finalized plan:
