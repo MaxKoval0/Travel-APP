@@ -91,15 +91,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 CORE PRINCIPLE: The user's existing notes contain PRELIMINARY research — approximate prices, speculative routes, uncertain accommodation. When the user provides confirmed info (bought tickets, booked hotel), that REPLACES the old speculation. Do not blend old guesses with new facts.
 
-THINK HOLISTICALLY: A single piece of confirmed info can affect MULTIPLE items. Example: user buys a bus ticket "Valencia → Benidorm" and says they'll be based in Benidorm for 2 days visiting 3 nearby locations. You MUST update ALL 3 location items:
-- Replace "how to get there from Valencia/Alicante" with "how to get there from Benidorm"
-- Replace "Ночёвка: в Аликанте или Бенидорме" with "Ночёвка: база в Бенидорме"
-- Distribute dates across the items based on the confirmed schedule
-- Remove old cost estimates for transport TO the base city (ticket is already bought)
+DETECT BASE CITIES: A ticket "A → B" means the user will be BASED in city B. This is critical — it changes the logistics of EVERY nearby item. When you detect a base city:
+1. Find ALL items geographically near that base (within ~80 km). Use your real-world knowledge of geography.
+2. Rewrite their notes: transport should be "from [base city]", NOT from the previous origin (Valencia, Alicante, etc.)
+3. Set their accommodation to the base city
+4. Schedule them during the stay at that base — NOT during a later leg in a distant city
+5. Remove old cost estimates for long-distance transport that's been replaced by the purchased ticket
 
-GEOGRAPHICAL SCHEDULING: When assigning dates, group items by geographical proximity to confirmed base cities. If the user stays in Benidorm on days 4-5 then travels to Almería on day 6, ALL items near Benidorm (within ~50-80 km: Guadalest, Cala Moraig, Els Arcs, etc.) must be scheduled during days 4-5, NOT after arriving in Almería. Use your real-world knowledge of geography to determine proximity — do not assign a coastal Costa Blanca location to a stay in Almería 300+ km away.
+THINK HOLISTICALLY: A single ticket can affect 5+ items. Example: ticket "Valencia → Benidorm" means Guadalest, Cala Moraig, Els Arcs are ALL reachable from Benidorm by local bus/taxi. Their notes must say "из Бенидорма автобус..." — NOT "из Аликанте" or "из Валенсии". The old routes are WRONG now.
 
-For EACH existing item, ask: "Does the user's new info change how this item's logistics work? Is this item near a confirmed base city?" If yes, update it.
+GEOGRAPHICAL SCHEDULING: Group items by proximity to confirmed bases. If staying in Benidorm days 4-5 then bus to Almería day 6, Costa Blanca items (Guadalest, Cala Moraig, Els Arcs — all within 50 km of Benidorm) go on days 4-5. Do NOT put them after Almería arrival.
+
+For EACH existing item, ask: "Is this item near a confirmed base city? Should its transport/dates change?" If yes, update it.
 
 RULES FOR NOTES — full rewrite, not merge:
 When you update notes, write them FROM SCRATCH as a clean finalized plan:
