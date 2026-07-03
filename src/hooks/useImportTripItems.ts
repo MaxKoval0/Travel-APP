@@ -18,6 +18,55 @@ export interface ParseTripItemsResult {
   items: ParsedTripItem[]
 }
 
+export interface TripItemUpdate {
+  item_id: string
+  title: string | null
+  notes: string | null
+  date: string | null
+  confidence: TripItemConfidence | null
+  category: string | null
+  area: string | null
+  cost_estimate: string | null
+  duration_estimate: string | null
+}
+
+export interface UpdateTripItemsResult {
+  updates: TripItemUpdate[]
+}
+
+export function useParseTripItemsUpdate() {
+  return useMutation({
+    mutationFn: async ({
+      text,
+      existingItems,
+    }: {
+      text: string
+      existingItems: {
+        id: string
+        title: string
+        notes: string | null
+        date: string | null
+        confidence: TripItemConfidence | null
+        category: string | null
+        area: string | null
+        cost_estimate: string | null
+        duration_estimate: string | null
+      }[]
+    }): Promise<UpdateTripItemsResult> => {
+      const res = await fetch('/api/import/update-trip-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, existingItems }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.error || `Ошибка разбора (${res.status})`)
+      }
+      return res.json()
+    },
+  })
+}
+
 export function useParseTripItemsImport() {
   return useMutation({
     mutationFn: async ({
