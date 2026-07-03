@@ -9,7 +9,8 @@ import type { TripItemWithPlace } from './types'
 
 type LocationMode = 'place' | 'pin' | 'none'
 
-const CONFIDENCE_OPTIONS: TripItemConfidence[] = ['confirmed', 'possible', 'questionable']
+const CONFIDENCE_OPTIONS: TripItemConfidence[] = ['confirmed', 'questionable']
+const CATEGORY_OPTIONS = ['достопримечательность', 'природа', 'пляж', 'транспорт', 'проживание', 'еда', 'активность']
 const NEW_AREA = '__new__'
 
 interface TripItemFormProps {
@@ -216,12 +217,19 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
           </div>
 
           <div className="flex gap-2">
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Категория"
-              className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-            />
+            <select
+              value={CATEGORY_OPTIONS.includes(category) ? category : category ? '__custom__' : ''}
+              onChange={(e) => {
+                if (e.target.value === '__custom__') setCategory(category || '')
+                else setCategory(e.target.value)
+              }}
+              className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">Категория</option>
+              {CATEGORY_OPTIONS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
             <div className="flex flex-1 flex-col gap-1">
               <select
                 value={isNewArea ? NEW_AREA : area}
