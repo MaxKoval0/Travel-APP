@@ -30,9 +30,11 @@ export default function TripDetailPage() {
   const reorderItems = useReorderTripItems()
 
   const [openPlaceId, setOpenPlaceId] = useState<string | null>(null)
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItemWithPlace | 'new' | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [groupBy, setGroupBy] = useState<'date' | 'area'>('date')
+  const [mapFocusPoint, setMapFocusPoint] = useState<{ lat: number; lng: number } | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -73,6 +75,22 @@ export default function TripDetailPage() {
       items: reordered.map((item, index) => ({ id: item.id, sort_order: index })),
     })
   }
+
+  const handleShowOnMap = (lat: number, lng: number) => {
+    setMapFocusPoint({ lat, lng })
+  }
+
+  const renderItem = (item: TripItemWithPlace, draggable?: boolean) => (
+    <TripItemRow
+      key={item.id}
+      item={item}
+      expanded={expandedItemId === item.id}
+      draggable={draggable}
+      onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+      onShowOnMap={handleShowOnMap}
+      onEdit={setEditingItem}
+    />
+  )
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
@@ -136,7 +154,12 @@ export default function TripDetailPage() {
         />
 
         <div className="mt-3 overflow-hidden rounded">
-          <TripMiniMap tripId={trip.id} items={dated.concat(undated)} onOpenPlace={setOpenPlaceId} />
+          <TripMiniMap
+            tripId={trip.id}
+            items={dated.concat(undated)}
+            onOpenPlace={setOpenPlaceId}
+            focusPoint={mapFocusPoint}
+          />
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-2">
@@ -195,9 +218,7 @@ export default function TripDetailPage() {
         {groupBy === 'date' ? (
           <>
             <ul className="mt-2 flex flex-col gap-1.5">
-              {dated.map((item) => (
-                <TripItemRow key={item.id} item={item} onOpenPlace={setOpenPlaceId} onEdit={setEditingItem} />
-              ))}
+              {dated.map((item) => renderItem(item))}
             </ul>
 
             {undated.length > 0 && (
@@ -208,15 +229,7 @@ export default function TripDetailPage() {
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={undated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                     <ul className="flex flex-col gap-1.5">
-                      {undated.map((item) => (
-                        <TripItemRow
-                          key={item.id}
-                          item={item}
-                          draggable
-                          onOpenPlace={setOpenPlaceId}
-                          onEdit={setEditingItem}
-                        />
-                      ))}
+                      {undated.map((item) => renderItem(item, true))}
                     </ul>
                   </SortableContext>
                 </DndContext>
@@ -228,9 +241,7 @@ export default function TripDetailPage() {
             <div key={area}>
               <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">{area}</p>
               <ul className="flex flex-col gap-1.5">
-                {areaItems.map((item) => (
-                  <TripItemRow key={item.id} item={item} onOpenPlace={setOpenPlaceId} onEdit={setEditingItem} />
-                ))}
+                {areaItems.map((item) => renderItem(item))}
               </ul>
             </div>
           ))

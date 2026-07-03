@@ -56,6 +56,11 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
     editing?.lat != null && editing?.lng != null ? { lat: editing.lat, lng: editing.lng } : null,
   )
 
+  const hasAdvancedValues = !!(
+    editing?.confidence || editing?.category || editing?.area || editing?.cost_estimate || editing?.duration_estimate
+  )
+  const [showAdvanced, setShowAdvanced] = useState(hasAdvancedValues)
+
   const filteredPlaces = useMemo(() => {
     if (!places || !placeQuery.trim()) return []
     const q = placeQuery.trim().toLowerCase()
@@ -101,23 +106,25 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
         className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
       />
 
-      <div className="flex items-center gap-1">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
-        />
-        {date && (
-          <button
-            type="button"
-            onClick={() => setDate('')}
-            className="shrink-0 px-2 py-2 text-slate-400 hover:text-red-500"
-            aria-label="Очистить дату"
-          >
-            ✕
-          </button>
-        )}
+      <div className="flex gap-2">
+        <div className="flex flex-1 items-center gap-1">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+          />
+          {date && (
+            <button
+              type="button"
+              onClick={() => setDate('')}
+              className="shrink-0 px-2 py-2 text-slate-400 hover:text-red-500"
+              aria-label="Очистить дату"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <textarea
@@ -127,77 +134,6 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
         rows={2}
         className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
       />
-
-      <div className="flex gap-2">
-        {CONFIDENCE_OPTIONS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setConfidence(confidence === c ? null : c)}
-            className={`flex-1 rounded border px-2 py-1.5 text-xs font-medium ${
-              confidence === c ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
-            }`}
-          >
-            {CONFIDENCE_LABELS[c]}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Категория (История, Природа…)"
-          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-        />
-        <div className="flex flex-1 flex-col gap-1">
-          <select
-            value={isNewArea ? NEW_AREA : area}
-            onChange={(e) => {
-              if (e.target.value === NEW_AREA) {
-                setIsNewArea(true)
-                setArea('')
-              } else {
-                setIsNewArea(false)
-                setArea(e.target.value)
-              }
-            }}
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">Без группы</option>
-            {existingAreas.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-            <option value={NEW_AREA}>+ Новая группа…</option>
-          </select>
-          {isNewArea && (
-            <input
-              autoFocus
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              placeholder="Название группы"
-              className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <input
-          value={costEstimate}
-          onChange={(e) => setCostEstimate(e.target.value)}
-          placeholder="Цена (например 8-12€)"
-          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-        />
-        <input
-          value={durationEstimate}
-          onChange={(e) => setDurationEstimate(e.target.value)}
-          placeholder="Длительность (например 2-3 часа)"
-          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-        />
-      </div>
 
       <div className="flex gap-2">
         {(['place', 'pin', 'none'] as const).map((m) => (
@@ -253,6 +189,89 @@ export default function TripItemForm({ tripId, editing, onClose }: TripItemFormP
         ))}
 
       {mode === 'pin' && <PinPicker pin={pin} onChange={setPin} />}
+
+      <button
+        type="button"
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="self-start text-xs font-medium text-slate-400 hover:text-slate-600"
+      >
+        {showAdvanced ? 'Скрыть подробности' : 'Подробнее...'}
+      </button>
+
+      {showAdvanced && (
+        <div className="flex flex-col gap-3 border-t border-slate-100 pt-3">
+          <div className="flex gap-2">
+            {CONFIDENCE_OPTIONS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setConfidence(confidence === c ? null : c)}
+                className={`flex-1 rounded border px-2 py-1.5 text-xs font-medium ${
+                  confidence === c ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-600'
+                }`}
+              >
+                {CONFIDENCE_LABELS[c]}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Категория"
+              className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            />
+            <div className="flex flex-1 flex-col gap-1">
+              <select
+                value={isNewArea ? NEW_AREA : area}
+                onChange={(e) => {
+                  if (e.target.value === NEW_AREA) {
+                    setIsNewArea(true)
+                    setArea('')
+                  } else {
+                    setIsNewArea(false)
+                    setArea(e.target.value)
+                  }
+                }}
+                className="rounded border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Без группы</option>
+                {existingAreas.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+                <option value={NEW_AREA}>+ Новая группа…</option>
+              </select>
+              {isNewArea && (
+                <input
+                  autoFocus
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  placeholder="Название группы"
+                  className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              value={costEstimate}
+              onChange={(e) => setCostEstimate(e.target.value)}
+              placeholder="Цена (8-12€)"
+              className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            />
+            <input
+              value={durationEstimate}
+              onChange={(e) => setDurationEstimate(e.target.value)}
+              placeholder="Длительность (2-3 часа)"
+              className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-1 flex gap-2">
         <button

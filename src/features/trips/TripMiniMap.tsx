@@ -23,9 +23,10 @@ interface TripMiniMapProps {
   tripId: string
   items: TripItemWithPlace[]
   onOpenPlace: (placeId: string) => void
+  focusPoint?: { lat: number; lng: number } | null
 }
 
-export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapProps) {
+export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: TripMiniMapProps) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || '',
@@ -78,6 +79,18 @@ export default function TripMiniMap({ tripId, items, onOpenPlace }: TripMiniMapP
   useEffect(() => {
     fitBounds()
   }, [fitBounds])
+
+  useEffect(() => {
+    if (!focusPoint) return
+    setExpanded(true)
+    const timer = setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.panTo(focusPoint)
+        mapRef.current.setZoom(14)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [focusPoint])
 
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
     if (pinClickedRef.current) {
