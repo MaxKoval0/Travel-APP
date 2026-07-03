@@ -1,6 +1,7 @@
 export type TouristStatus = 'top' | 'normal'
 export type FpvStatus = 'allowed' | 'unclear' | 'banned'
 export type TripStatus = 'planned' | 'active' | 'done'
+export type TripExpense = { id: string; title: string; amount: number }
 export type TripItemConfidence = 'confirmed' | 'possible' | 'questionable'
 
 // NOTE: these must be `type` aliases, not `interface` declarations.
@@ -36,7 +37,7 @@ export type Trip = {
   date_end: string | null
   status: TripStatus
   description: string | null
-  notes: string | null
+  expenses: TripExpense[]
   created_at: string
   updated_at: string
 }
@@ -111,7 +112,7 @@ export type Database = {
           date_end?: string | null
           status?: TripStatus
           description?: string | null
-          notes?: string | null
+          expenses?: TripExpense[]
           created_at?: string
           updated_at?: string
         }

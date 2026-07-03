@@ -12,6 +12,7 @@ import TripItemRow from './TripItemRow'
 import TripItemForm from './TripItemForm'
 import TextImportForm from './TextImportForm'
 import TextUpdateForm from './TextUpdateForm'
+import TripCosts from './TripCosts'
 import type { TripItemWithPlace } from './types'
 
 const STATUSES: TripStatus[] = ['planned', 'active', 'done']
@@ -155,17 +156,7 @@ export default function TripDetailPage() {
           className="mt-2 w-full rounded border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-500"
         />
 
-        <textarea
-          key={`${trip.id}-notes`}
-          defaultValue={trip.notes ?? ''}
-          onBlur={(e) => {
-            const value = e.target.value.trim()
-            if (value !== (trip.notes ?? '')) updateTrip.mutate({ id: trip.id, notes: value || null })
-          }}
-          placeholder="Заметки по поездке (билеты, абонементы, общие расходы...)"
-          rows={2}
-          className="mt-2 w-full rounded border border-amber-200 bg-amber-50/50 px-2 py-1.5 text-sm outline-none focus:border-amber-400"
-        />
+        <TripCosts trip={trip} items={dated.concat(undated)} />
 
         <div className="mt-3 overflow-hidden rounded">
           <TripMiniMap
