@@ -36,6 +36,7 @@ export type Trip = {
   date_end: string | null
   status: TripStatus
   description: string | null
+  notes: string | null
   created_at: string
   updated_at: string
 }
@@ -110,6 +111,7 @@ export type Database = {
           date_end?: string | null
           status?: TripStatus
           description?: string | null
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }

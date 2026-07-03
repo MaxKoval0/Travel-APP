@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParseTripItemsUpdate, type TripItemUpdate } from '../../hooks/useImportTripItems'
 import { useUpdateTripItem } from '../../hooks/useTripItems'
 import type { TripItemWithPlace } from './types'
@@ -27,6 +27,8 @@ const CONFIDENCE_LABELS: Record<string, string> = {
   questionable: 'Под вопросом',
 }
 
+const CHANGED_FIELDS: FieldKey[] = ['title', 'date', 'confidence', 'category', 'area', 'cost_estimate', 'duration_estimate', 'notes']
+
 interface ReviewUpdate {
   update: TripItemUpdate
   item: TripItemWithPlace
@@ -36,18 +38,82 @@ interface ReviewUpdate {
 export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) {
   const parseUpdate = useParseTripItemsUpdate()
   const updateItem = useUpdateTripItem()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState('')
+  const [images, setImages] = useState<{ dataUrl: string; name: string }[]>([])
   const [result, setResult] = useState<ReviewUpdate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
+
+  const handleAddImages = (files: FileList | null) => {
+    if (!files) return
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue
+      const reader = new FileReader()
+      reader.onload = () => {
+        setImages((prev) => [...prev, { dataUrl: reader.result as string, name: file.name }])
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const toggleVoice = () => {
+    const SpeechRecognition = window.SpeechRecognition || (window as unknown as { webkitSpeechRecognition: typeof window.SpeechRecognition }).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setError('Голосовой ввод не поддерживается в этом браузере')
+      return
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'ru-RU'
+    recognition.interimResults = false
+    recognition.continuous = true
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let transcript = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          transcript += event.results[i][0].transcript
+        }
+      }
+      if (transcript) {
+        setText((prev) => (prev ? prev + ' ' + transcript : transcript))
+      }
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsListening(true)
+  }
 
   const handleParse = async () => {
-    if (!text.trim()) return
+    if (!text.trim() && images.length === 0) return
     setError(null)
     try {
       const res = await parseUpdate.mutateAsync({
         text: text.trim(),
+        images: images.length > 0 ? images.map((img) => img.dataUrl) : undefined,
         existingItems: items.map((i) => ({
           id: i.id,
           title: i.title,
@@ -66,8 +132,13 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
       for (const update of res.updates) {
         const item = itemMap.get(update.item_id)
         if (!item) continue
-        const hasChanges = CHANGED_FIELDS.some((f) => update[f] !== null)
-        if (hasChanges) reviews.push({ update, item, include: true })
+        const reallyChanged = CHANGED_FIELDS.some((f) => {
+          if (update[f] === null) return false
+          const oldVal = item[f] ?? ''
+          const newVal = update[f] ?? ''
+          return String(oldVal) !== String(newVal)
+        })
+        if (reallyChanged) reviews.push({ update, item, include: true })
       }
 
       if (reviews.length === 0) {
@@ -92,9 +163,16 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
       for (const { update } of toApply) {
         const patch: Record<string, unknown> = { id: update.item_id }
         for (const field of CHANGED_FIELDS) {
-          if (update[field] !== null) patch[field] = update[field] || null
+          if (update[field] === null) continue
+          const oldVal = String(items.find((i) => i.id === update.item_id)?.[field] ?? '')
+          const newVal = String(update[field] ?? '')
+          if (oldVal !== newVal) {
+            patch[field] = update[field] || null
+          }
         }
-        await updateItem.mutateAsync(patch as { id: string } & Record<string, unknown>)
+        if (Object.keys(patch).length > 1) {
+          await updateItem.mutateAsync(patch as { id: string } & Record<string, unknown>)
+        }
       }
       onClose()
     } catch (err) {
@@ -110,17 +188,59 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
         <>
           <h3 className="text-sm font-semibold text-slate-700">Обновить через AI</h3>
           <p className="text-xs text-slate-500">
-            Вставь новую информацию — бронь, билеты, уточнённые даты, цены — и AI обновит нужные пункты.
+            Вставь текст или фото билетов/брони — AI обновит нужные пункты.
           </p>
-          <textarea
-            autoFocus
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Купил билет Валенсия→Агилас на 7 июля, 14:30, 23€. Бронь отеля в Агиласе на 7-8 июля..."
-            rows={5}
-            className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+          <div className="relative">
+            <textarea
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Купил билет на автобус Валенсия→Бенидорм на 4 число, 15:01, 21€..."
+              rows={5}
+              className="w-full rounded border border-slate-300 px-3 py-2 pr-10 text-sm outline-none focus:border-emerald-500"
+            />
+            <button
+              type="button"
+              onClick={toggleVoice}
+              className={`absolute right-2 top-2 rounded-full p-1.5 ${
+                isListening
+                  ? 'bg-red-100 text-red-600 animate-pulse'
+                  : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+              }`}
+              title={isListening ? 'Остановить запись' : 'Голосовой ввод'}
+            >
+              <MicIcon className="h-4 w-4" />
+            </button>
+          </div>
+
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {images.map((img, i) => (
+                <div key={i} className="relative">
+                  <img src={img.dataUrl} alt={img.name} className="h-16 w-16 rounded border border-slate-200 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(i)}
+                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => handleAddImages(e.target.files)}
+            className="hidden"
           />
+
           {error && <p className="text-xs text-red-500">{error}</p>}
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -131,8 +251,16 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
             </button>
             <button
               type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-600"
+              title="Добавить фото"
+            >
+              <CameraIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
               onClick={handleParse}
-              disabled={!text.trim() || parseUpdate.isPending}
+              disabled={(!text.trim() && images.length === 0) || parseUpdate.isPending}
               className="flex-1 rounded bg-amber-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {parseUpdate.isPending ? 'Анализирую…' : 'Разобрать'}
@@ -165,7 +293,12 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-800">{review.item.title}</p>
                     <div className="mt-2 flex flex-col gap-1.5">
-                      {CHANGED_FIELDS.filter((f) => review.update[f] !== null).map((field) => (
+                      {CHANGED_FIELDS.filter((f) => {
+                        if (review.update[f] === null) return false
+                        const oldVal = review.item[f] ?? ''
+                        const newVal = review.update[f] ?? ''
+                        return String(oldVal) !== String(newVal)
+                      }).map((field) => (
                         <FieldDiff
                           key={field}
                           field={field}
@@ -205,8 +338,6 @@ export default function TextUpdateForm({ items, onClose }: TextUpdateFormProps) 
   )
 }
 
-const CHANGED_FIELDS: FieldKey[] = ['title', 'date', 'confidence', 'category', 'area', 'cost_estimate', 'duration_estimate', 'notes']
-
 function FieldDiff({ field, oldValue, newValue }: { field: FieldKey; oldValue: unknown; newValue: unknown }) {
   const label = FIELD_LABELS[field]
   const formatValue = (v: unknown) => {
@@ -235,5 +366,23 @@ function FieldDiff({ field, oldValue, newValue }: { field: FieldKey; oldValue: u
       <span className="text-slate-400">→</span>
       <span className="font-medium text-green-700">{newStr}</span>
     </div>
+  )
+}
+
+function MicIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+    </svg>
+  )
+}
+
+function CameraIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
   )
 }

@@ -61,6 +61,8 @@ create table if not exists trips (
   updated_at timestamptz not null default now()
 );
 
+alter table trips add column if not exists notes text;
+
 create table if not exists trip_items (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references trips(id) on delete cascade,

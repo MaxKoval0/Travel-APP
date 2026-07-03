@@ -38,9 +38,11 @@ export function useParseTripItemsUpdate() {
   return useMutation({
     mutationFn: async ({
       text,
+      images,
       existingItems,
     }: {
       text: string
+      images?: string[]
       existingItems: {
         id: string
         title: string
@@ -56,7 +58,7 @@ export function useParseTripItemsUpdate() {
       const res = await fetch('/api/import/update-trip-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, existingItems }),
+        body: JSON.stringify({ text, images, existingItems }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => null)

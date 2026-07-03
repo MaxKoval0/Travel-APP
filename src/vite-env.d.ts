@@ -9,3 +9,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  SpeechRecognition: typeof SpeechRecognition
+  webkitSpeechRecognition: typeof SpeechRecognition
+}
