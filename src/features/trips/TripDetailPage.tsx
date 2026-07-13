@@ -38,6 +38,7 @@ export default function TripDetailPage() {
   const [showUpdate, setShowUpdate] = useState(false)
   const [groupBy, setGroupBy] = useState<'date' | 'area'>('date')
   const [mapFocusPoint, setMapFocusPoint] = useState<{ lat: number; lng: number } | null>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -62,17 +63,36 @@ export default function TripDetailPage() {
     return Array.from(groups.entries())
   }, [items])
 
+  const dateGroups = useMemo(() => {
+    const groups = new Map<string, TripItemWithPlace[]>()
+    for (const item of dated) {
+      const key = item.date!
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(item)
+    }
+    return Array.from(groups.entries())
+  }, [dated])
+
   if (!trip) {
     return <div className="p-4 text-sm text-slate-400">Загрузка…</div>
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const makeHandleDragEnd = (groupItems: TripItemWithPlace[]) => (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !tripId) return
-    const oldIndex = undated.findIndex((i) => i.id === active.id)
-    const newIndex = undated.findIndex((i) => i.id === over.id)
+    const oldIndex = groupItems.findIndex((i) => i.id === active.id)
+    const newIndex = groupItems.findIndex((i) => i.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
-    const reordered = arrayMove(undated, oldIndex, newIndex)
+    const reordered = arrayMove(groupItems, oldIndex, newIndex)
     reorderItems.mutate({
       tripId,
       items: reordered.map((item, index) => ({ id: item.id, sort_order: index })),
@@ -83,17 +103,43 @@ export default function TripDetailPage() {
     setMapFocusPoint({ lat, lng })
   }
 
-  const renderItem = (item: TripItemWithPlace, draggable?: boolean) => (
+  const renderItem = (item: TripItemWithPlace) => (
     <TripItemRow
       key={item.id}
       item={item}
       expanded={expandedItemId === item.id}
-      draggable={draggable}
+      draggable
       onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
       onShowOnMap={handleShowOnMap}
       onEdit={setEditingItem}
     />
   )
+
+  const renderGroup = (key: string, label: string, groupItems: TripItemWithPlace[]) => {
+    const collapsed = collapsedGroups.has(key)
+    return (
+      <div key={key} className="mt-3">
+        <button
+          type="button"
+          onClick={() => toggleGroup(key)}
+          className="flex w-full items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400 hover:text-slate-600"
+        >
+          <span className={`text-[10px] transition-transform ${collapsed ? '' : 'rotate-90'}`}>▸</span>
+          {label}
+          <span className="font-normal">({groupItems.length})</span>
+        </button>
+        {!collapsed && (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={makeHandleDragEnd(groupItems)}>
+            <SortableContext items={groupItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              <ul className="mt-1.5 flex flex-col gap-1.5">
+                {groupItems.map((item) => renderItem(item))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
@@ -237,34 +283,17 @@ export default function TripDetailPage() {
 
         {groupBy === 'date' ? (
           <>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {dated.map((item) => renderItem(item))}
-            </ul>
-
-            {undated.length > 0 && (
-              <>
-                <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Не распределено
-                </p>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={undated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                    <ul className="flex flex-col gap-1.5">
-                      {undated.map((item) => renderItem(item, true))}
-                    </ul>
-                  </SortableContext>
-                </DndContext>
-              </>
+            {dateGroups.map(([date, groupItems]) =>
+              renderGroup(
+                `date:${date}`,
+                new Date(date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+                groupItems,
+              ),
             )}
+            {undated.length > 0 && renderGroup('undated', 'Не распределено', undated)}
           </>
         ) : (
-          byArea.map(([area, areaItems]) => (
-            <div key={area}>
-              <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">{area}</p>
-              <ul className="flex flex-col gap-1.5">
-                {areaItems.map((item) => renderItem(item))}
-              </ul>
-            </div>
-          ))
+          byArea.map(([area, areaItems]) => renderGroup(`area:${area}`, area, areaItems))
         )}
 
         {dated.length === 0 && undated.length === 0 && !editingItem && (
