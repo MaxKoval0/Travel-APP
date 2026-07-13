@@ -24,9 +24,11 @@ interface TripMiniMapProps {
   items: TripItemWithPlace[]
   onOpenPlace: (placeId: string) => void
   focusPoint?: { lat: number; lng: number } | null
+  expanded: boolean
+  onExpandedChange: (expanded: boolean) => void
 }
 
-export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: TripMiniMapProps) {
+export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint, expanded, onExpandedChange }: TripMiniMapProps) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || '',
@@ -38,7 +40,6 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
   const initialFitDoneRef = useRef(false)
   const pinClickedRef = useRef(false)
 
-  const [expanded, setExpanded] = useState(false)
   const [pendingPoint, setPendingPoint] = useState<{ lat: number; lng: number } | null>(null)
   const [pendingTitle, setPendingTitle] = useState('')
 
@@ -120,7 +121,6 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
 
   useEffect(() => {
     if (!focusPoint) return
-    setExpanded(true)
     const timer = setTimeout(() => {
       if (mapRef.current) {
         mapRef.current.panTo(focusPoint)
@@ -176,7 +176,7 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
           <button
             type="button"
             onClick={() => {
-              setExpanded(false)
+              onExpandedChange(false)
               setPendingPoint(null)
             }}
             className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600"
@@ -190,7 +190,7 @@ export default function TripMiniMap({ tripId, items, onOpenPlace, focusPoint }: 
         {!expanded && (
           <button
             type="button"
-            onClick={() => setExpanded(true)}
+            onClick={() => onExpandedChange(true)}
             aria-label="Развернуть карту"
             className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded bg-white/90 text-slate-600 shadow"
           >

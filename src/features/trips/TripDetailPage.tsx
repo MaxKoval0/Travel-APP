@@ -38,6 +38,7 @@ export default function TripDetailPage() {
   const [showUpdate, setShowUpdate] = useState(false)
   const [groupBy, setGroupBy] = useState<'date' | 'area'>('date')
   const [mapFocusPoint, setMapFocusPoint] = useState<{ lat: number; lng: number } | null>(null)
+  const [mapExpanded, setMapExpanded] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
@@ -100,6 +101,7 @@ export default function TripDetailPage() {
   }
 
   const handleShowOnMap = (lat: number, lng: number) => {
+    setMapExpanded(true)
     setMapFocusPoint({ lat, lng })
   }
 
@@ -210,6 +212,8 @@ export default function TripDetailPage() {
             items={dated.concat(undated)}
             onOpenPlace={setOpenPlaceId}
             focusPoint={mapFocusPoint}
+            expanded={mapExpanded}
+            onExpandedChange={setMapExpanded}
           />
         </div>
 
